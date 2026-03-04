@@ -1,62 +1,62 @@
-# ECA Monitor – Remote Desktop Audit System 🔒🖥️
+# ECA Monitor – Sistema de Auditoría de Escritorio Remoto 🔒🖥️
 
-A high-performance, real-time auditing and monitoring dashboard designed for managing multiple Windows Servers and their active Remote Desktop (RDP) sessions. Built with modern web technologies to provide instant visibility into user activities, server health, and security events.
+Un panel de control en tiempo real de alto rendimiento diseñado para la auditoría y monitoreo de múltiples Servidores Windows y sus sesiones de Escritorio Remoto (RDP) activas. Construido con tecnologías web modernas para proveer visibilidad instantánea sobre la actividad de los usuarios, el estado de los servidores y eventos de seguridad.
 
-![Dashboard Preview](https://github.com/DazzleEaglePe/audit-dashboard-remote-desktop/blob/main/public/preview.png?raw=true) *(Note: Add a screenshot of the dashboard here)*
+![Vista Previa del Dashboard](https://github.com/DazzleEaglePe/audit-dashboard-remote-desktop/blob/main/public/preview.png?raw=true) *(Nota: Agrega aquí una captura de pantalla del dashboard)*
 
-## 🚀 Purpose & Problem Solved
-Managing multiple Windows servers with concurrent RDP users often leads to "blind spots" regarding what users are doing, when they log in, and the overall load on the servers.
+## 🚀 Propósito y Problema Resuelto
+Administrar múltiples servidores Windows con múltiples usuarios RDP conectados al mismo tiempo suele generar "puntos ciegos" respecto a qué están haciendo los usuarios, cuándo inician sesión y cuál es la carga de trabajo real en los servidores.
 
-ECA Monitor solves this by deploying a lightweight background agent on each Windows server that continuously feeds data, screenshots, and security metrics to a centralized, beautiful Next.js web dashboard. It acts as an elite "security camera" and health monitor for your RDP infrastructure.
+ECA Monitor resuelve esto desplegando un agente ultraligero que se ejecuta en segundo plano en cada servidor Windows y alimenta de manera continua datos de sistema, capturas de pantalla y métricas de seguridad a un moderno panel web en Next.js. Actúa como una "cámara de seguridad" de élite y un monitor vital de recursos para toda tu infraestructura RDP.
 
-## ✨ Key Features & Capabilities
+## ✨ Características Principales
 
-*   **Real-Time Mosaics (Live Screenshots):** View live thumbnails of every active user's desktop across all servers simultaneously.
-*   **Zero-Latency WebSocket Streaming:** Images are captured, encoded to Base64, and streamed instantly directly into the React DOM via Socket.io without any HTTP fetching delays.
-*   **Active Session Management:** Instantly see who is logged in, their session ID, IP address, and connection state (`Active` vs `Disconnected`).
-*   **Server Health Telemetry:** Tracks CPU, RAM, and Disk usage of each connected server in real-time, preventing bottlenecks.
-*   **Automated Audit Logs:** Captures Windows Event Log data (Event IDs 4624/4634) to keep an immutable history of every successful logon and logoff.
-*   **Smart Alert System:** Detects offline servers or suspicious disconnections and persistently alerts the administrator via the dashboard.
+*   **Mosaico en Tiempo Real (Live Screenshots):** Visualiza miniaturas en vivo de cada escritorio activo a través de todos los servidores de manera simultánea.
+*   **Transmisión WebSocket Latencia Cero:** Las imágenes son capturadas, codificadas a Base64 y transmitidas instantáneamente de forma directa al DOM de React vía Socket.io, eliminando cualquier retraso clásico de peticiones HTTP.
+*   **Gestión de Sesiones Activas:** Ve al instante quién está conectado, su ID de sesión y su estado de conexión (`Activo` vs `Desconectado`).
+*   **Telemetría de Salud del Servidor:** Monitorea el uso de CPU, RAM y almacenamiento de cada servidor conectado en tiempo real para prevenir sobrecargas.
+*   **Logs de Auditoría Automatizados:** Captura los registros de eventos de Windows (Event IDs 4624/4634) para mantener un historial inmutable de cada inicio y cierre de sesión exitoso.
+*   **Sistema Inteligente de Alertas:** Detecta servidores desconectados de la red y mantiene un registro de notificaciones persistentes para el administrador en el panel de control.
 
-## 🛠️ Architecture & Tech Stack
+## 🛠️ Arquitectura y Stack Tecnológico
 
-This project uses a decoupled Agent-Server architecture designed for maximum stability on the endpoints and maximum performance on the viewing client.
+Este proyecto utiliza una arquitectura desacoplada Cliente-Servidor diseñada para máxima estabilidad en los servidores de origen y máximo rendimiento en el lado del visualizador (frontend).
 
-### 1. The Dashboard (Backend & Frontend)
-Hosted on a Linux VPS, orchestrating the agents and serving the UI.
+### 1. El Dashboard (Backend & Frontend)
+Alojado en un servidor VPS Linux, organiza las respuestas de los agentes y sirve la Interfaz de Usuario.
 *   **Framework:** Next.js 14+ (App Router) & React 19
-*   **Real-time Protocol:** Socket.io (Dual HTTP Polling + WebSocket Base64 Streaming)
-*   **Database:** High-speed local SQLite (`better-sqlite3`) for instant ingestion.
-*   **Styling & UI:** Tailwind CSS, `shadcn/ui`, and Lucide Icons for a premium dark-mode aesthetic.
-*   **Authentication:** JWT-based login (NextAuth / custom middleware) to protect the dashboard.
+*   **Protocolo de Tiempo Real:** Socket.io (Dual HTTP Polling + WebSocket Base64 Streaming)
+*   **Base de Datos:** SQLite local de alta velocidad (`better-sqlite3`) para ingesta y lectura instantánea.
+*   **Estilos y UI:** Tailwind CSS, `shadcn/ui` y Lucide Icons, diseñados con estética visual premium (Glassmorphism / Modo Oscuro).
+*   **Autenticación:** Sistema de login seguro con JWT y cifrado de contraseñas.
 
-### 2. The Agent (Endpoint)
-Runs silently on the target Windows Servers without interfering with users.
-*   **Core:** Native PowerShell (C#-level API access).
-*   **Sub-processes:** Sysinternals `PsExec` to securely jump into disconnected user sessions to capture screen arrays securely.
-*   **Resiliency:** Runs as a robust Windows Scheduled Task (`AtLogOn`), automatically restarting and handling silent HTTP POST retries if the network drops.
+### 2. El Agente (Endpoint)
+Se ejecuta de forma invisible y silenciosa en los servidores Windows de destino sin interrumpir a los usuarios.
+*   **Núcleo:** PowerShell Nativo usando integración de bibliotecas .NET/C#.
+*   **Sub-procesos:** Utiliza la herramienta Sysinternals `PsExec` de Microsoft para acceder de manera segura a sesiones bloqueadas de usuarios ajenos y capturar arreglos gráficos.
+*   **Resiliencia:** Se implementa como una Tarea Programada de Windows inquebrantable (`AtLogOn`), que maneja reconexiones automáticas, guardado en búfer local y reintentos HTTP POST silenciosos en caso de pérdida de red.
 
-## 📈 Benefits for the Organization
-1.  **Increased Accountability:** Employees and contractors know their sessions are audited, naturally improving productivity and compliance.
-2.  **Instant Troubleshooting:** IT can immediately see what a user is looking at without needing to initiate a disruptive screen-sharing session.
-3.  **Proactive Resource Management:** Identifying which server is overwhelmed with heavy applications before the server crashes.
-4.  **Forensic Capability:** If a security incident occurs, the logs and screenshots provide a clear timeline of RDP access.
+## 📈 Beneficios para la Organización
+1.  **Aumento de Transparencia:** Los colaboradores saben que el entorno RDP corporativo es auditado, mejorando orgánicamente la productividad y el cumplimiento de normas.
+2.  **Troubleshooting Instantáneo:** El equipo de TI puede ver inmediatamente qué está ocurriendo en la pantalla de un usuario sin necesidad de iniciar una molesta intervención de soporte remoto que interrumpa su flujo.
+3.  **Gestión Proactiva de TI:** Identifica de un vistazo qué servidor está sufriendo sobrecarga de memoria antes de que provoque una caída del sistema que afecte a los demás usuarios contables.
+4.  **Capacidad Forense de Seguridad:** Si acontece algún incidente, la combinación de registros y capturas de pantalla conforman una línea de tiempo infalible comprobando accesos RDP.
 
-## ⚙️ Installation & Deployment
+## ⚙️ Instalación y Despliegue
 
-### Dashboard (VPS Server)
+### Servidor del Dashboard (VPS)
 ```bash
 git clone https://github.com/DazzleEaglePe/audit-dashboard-remote-desktop.git
 cd audit-dashboard-remote-desktop/dashboard
 npm install
-# Set up .env.local with JWT_SECRET and API_KEY
+# Configura .env.local con JWT_SECRET y la variable secreta API_KEY
 npm run build
 pm2 start server.js --name "eca-dashboard"
 ```
 
-### Windows Agent Deployment
-Run the consolidated PowerShell setup script found in the configuration manual on the target server as Administrator. It automatically creates `C:\ECA_Monitor`, downloads the necessary scripts, sets up Windows Defender exclusions, and registers the background scheduled task to survive reboots.
+### Despliegue de Agentes en Windows
+Se provee un script maestro unificado escrito en PowerShell que puede ser pegado por Administradores directamente en la consola del Servidor. Éste script automatiza la descarga en la ruta `C:\ECA_Monitor\`, programa la "Auto-Recuperación de Procesos" contra fallas en el inicio de Windows y añade automáticamente las necesarias exclusiones de intrusión nativa sobre Windows Defender.
 
 ---
 
-*Developed autonomously as an advanced infrastructure monitoring tool.*
+*Desarrollado de manera autónoma como herramienta avanzada de monitoreo de infraestructura RDP.*
