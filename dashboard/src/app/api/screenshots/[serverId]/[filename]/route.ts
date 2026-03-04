@@ -7,14 +7,12 @@ const SCREENSHOTS_DIR = process.env.SCREENSHOTS_PATH || './public/screenshots';
 // ═══════════════════════════════════════════════════════
 // GET /api/screenshots/[serverId]/[filename]
 // Serves screenshot images securely from the server disk
-// ═══════════════════════════════════════════════════════
-
 export async function GET(
   request: NextRequest,
-  { params }: { params: { serverId: string; filename: string } }
+  { params }: { params: Promise<{ serverId: string; filename: string }> }
 ) {
   try {
-    const { serverId, filename } = params;
+    const { serverId, filename } = await params;
     
     // Basic validation to prevent directory traversal
     if (!serverId || !filename || filename.includes('..') || serverId.includes('..')) {
