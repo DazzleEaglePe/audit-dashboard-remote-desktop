@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Camera, MonitorSmartphone, RefreshCw, Maximize2 } from "lucide-react";
 import type { Session } from "@/types";
+import { io } from "socket.io-client";
 
 const SERVER_LABELS: Record<string, string> = {
     srv1: "Servidor 1",
@@ -25,7 +26,8 @@ export default function ScreenshotsPage() {
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotItem | null>(null);
-    const [refreshKey, setRefreshKey] = useState(0);
+    const [refreshKey, setRefreshKey] = useState(Date.now());
+    const [imageTimestamps, setImageTimestamps] = useState<Record<string, number>>({});
 
     async function fetchSessions() {
         try {
@@ -41,11 +43,31 @@ export default function ScreenshotsPage() {
     }
 
     useEffect(() => {
+        // WebSocket connection for real-time updates
+        const socketIo = io();
+
+        socketIo.on("connect", () => {
+            console.log("Connected to WebSocket for real-time screenshots");
+        });
+
+        socketIo.on("screenshot:new", (data: { serverId: string; username: string; sessionId: number }) => {
+            const key = `${data.serverId}-${data.username}-${data.sessionId}`;
+            // Instantly update just this specific image's cache-busting timestamp
+            setImageTimestamps((prev) => ({ ...prev, [key]: Date.now() }));
+        });
+
+        return () => {
+            socketIo.disconnect();
+        };
+    }, []);
+
+    useEffect(() => {
+        // Fallback polling for sessions list and catching missed screenshot updates
         fetchSessions();
         const interval = setInterval(() => {
             fetchSessions();
-            setRefreshKey((k) => k + 1);
-        }, 3000);
+            setRefreshKey(Date.now());
+        }, 10000);
         return () => clearInterval(interval);
     }, []);
 
@@ -59,7 +81,10 @@ export default function ScreenshotsPage() {
     }, {});
 
     function getScreenshotUrl(serverId: string, username: string, sessionId: number) {
-        return `/api/screenshots/${serverId}/${username}_${sessionId}_thumb.jpg?t=${refreshKey}`;
+        const key = `${serverId}-${username}-${sessionId}`;
+        // Use the real-time websocket timestamp if available, otherwise the 10s fallback polling key
+        const ts = imageTimestamps[key] || refreshKey;
+        return `/api/screenshots/${serverId}/${username}_${sessionId}_thumb.jpg?t=${ts}`;
     }
 
     return (

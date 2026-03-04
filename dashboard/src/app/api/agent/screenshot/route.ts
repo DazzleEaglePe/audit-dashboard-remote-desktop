@@ -7,6 +7,7 @@ import {
 } from '@/lib/api-middleware';
 import path from 'path';
 import fs from 'fs';
+import { notifyNewScreenshot } from '@/lib/socket';
 
 // ═══════════════════════════════════════════════════════
 // POST /api/agent/screenshot
@@ -58,7 +59,10 @@ export async function POST(request: NextRequest) {
 
     const imageUrl = `/screenshots/${serverId}/${filename}?t=${Date.now()}`;
 
-    // Store for WebSocket emission
+    // Emit WebSocket event for real-time frontend update
+    notifyNewScreenshot(serverId, username, parseInt(sessionId) || 0);
+
+    // Store for WebSocket emission (legacy fallback)
     if (typeof globalThis !== 'undefined') {
       (globalThis as Record<string, unknown>).__lastScreenshot = {
         server_id: serverId,
