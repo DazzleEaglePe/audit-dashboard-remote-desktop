@@ -110,7 +110,7 @@ export function getServerById(id: string): ServerWithMetrics | null {
 export function getAllActiveSessions(): Session[] {
   const db = getDb();
   return db
-    .prepare("SELECT * FROM sessions WHERE state != 'Disconnected' ORDER BY server_id, username")
+    .prepare("SELECT * FROM sessions ORDER BY server_id, username")
     .all() as Session[];
 }
 

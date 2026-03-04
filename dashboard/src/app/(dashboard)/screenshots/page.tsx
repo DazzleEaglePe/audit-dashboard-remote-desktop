@@ -80,10 +80,8 @@ export default function ScreenshotsPage() {
 
     // Group sessions by server
     const sessionsByServer = sessions.reduce<Record<string, Session[]>>((acc, session) => {
-        if (session.state === "Active") {
-            if (!acc[session.server_id]) acc[session.server_id] = [];
-            acc[session.server_id].push(session);
-        }
+        if (!acc[session.server_id]) acc[session.server_id] = [];
+        acc[session.server_id].push(session);
         return acc;
     }, {});
 
@@ -157,10 +155,11 @@ export default function ScreenshotsPage() {
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                                     {serverSessions.map((session) => {
                                         const imgUrl = getScreenshotUrl(serverId, session.username, session.session_id);
+                                        const isOffline = session.state !== "Active";
                                         return (
                                             <Card
                                                 key={`${serverId}-${session.session_id}`}
-                                                className="glass border-border/30 hover:border-primary/40 transition-all duration-200 cursor-pointer group"
+                                                className={`glass border-border/30 hover:border-primary/40 transition-all duration-200 cursor-pointer group ${isOffline ? "opacity-75" : ""}`}
                                                 onClick={() =>
                                                     setSelectedScreenshot({
                                                         server_id: serverId,
@@ -176,30 +175,43 @@ export default function ScreenshotsPage() {
                                                         <img
                                                             src={imgUrl}
                                                             alt={`Pantalla de ${session.username}`}
-                                                            className="w-full h-full object-cover"
+                                                            className={`w-full h-full object-cover transition-all ${isOffline ? "grayscale brightness-50" : ""}`}
                                                             onError={(e) => {
                                                                 const target = e.target as HTMLImageElement;
                                                                 target.style.display = "none";
-                                                                if (target.nextElementSibling) {
+                                                                if (target.nextElementSibling && !isOffline) {
                                                                     (target.nextElementSibling as HTMLElement).style.display = "flex";
                                                                 }
                                                             }}
                                                         />
+                                                        {isOffline && (
+                                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm z-10">
+                                                                <MonitorSmartphone className="w-8 h-8 text-muted-foreground mb-2" />
+                                                                <Badge variant="outline" className="text-muted-foreground bg-background/50 border-muted-foreground/30">
+                                                                    Fuera de línea
+                                                                </Badge>
+                                                            </div>
+                                                        )}
                                                         <div
-                                                            className="absolute inset-0 items-center justify-center text-muted-foreground/40 hidden"
+                                                            className={`absolute inset-0 items-center justify-center text-muted-foreground/40 hidden ${isOffline ? '!hidden' : ''}`}
                                                         >
                                                             <Camera className="w-8 h-8" />
                                                         </div>
                                                         {/* Hover overlay */}
-                                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                        <div className={`absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100 ${isOffline ? 'z-20' : ''}`}>
                                                             <Maximize2 className="w-5 h-5 text-white" />
                                                         </div>
                                                     </div>
-                                                    <div className="mt-2 px-1">
-                                                        <p className="text-xs font-medium font-mono">{session.username}</p>
-                                                        <p className="text-[10px] text-muted-foreground">
-                                                            Sesión #{session.session_id}
-                                                        </p>
+                                                    <div className="mt-2 px-1 flex items-center justify-between">
+                                                        <div>
+                                                            <p className="text-xs font-medium font-mono truncate max-w-[100px]">{session.username}</p>
+                                                            <p className="text-[10px] text-muted-foreground">
+                                                                Sesión #{session.session_id}
+                                                            </p>
+                                                        </div>
+                                                        <Badge variant="secondary" className={`text-[9px] px-1 py-0 h-4 ${isOffline ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                                            {isOffline ? 'Desc' : 'Activa'}
+                                                        </Badge>
                                                     </div>
                                                 </CardContent>
                                             </Card>

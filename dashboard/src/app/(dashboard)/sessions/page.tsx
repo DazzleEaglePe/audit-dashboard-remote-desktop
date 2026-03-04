@@ -66,7 +66,7 @@ export default function SessionsPage() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold">Sesiones Activas</h1>
+                    <h1 className="text-2xl font-bold">Sesiones de Servidor</h1>
                     <p className="text-muted-foreground text-sm mt-1">
                         {filteredSessions.length} sesiones en{" "}
                         {serverFilter === "all" ? "todos los servidores" : SERVER_NAMES[serverFilter]}
@@ -90,7 +90,7 @@ export default function SessionsPage() {
                 <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
                         <Monitor className="w-4 h-4 text-primary" />
-                        Sesiones RDP
+                        Historial y Sesiones Actuales
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -103,7 +103,7 @@ export default function SessionsPage() {
                     ) : filteredSessions.length === 0 ? (
                         <div className="text-center py-12 text-muted-foreground">
                             <Monitor className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                            <p>No hay sesiones activas</p>
+                            <p>No hay sesiones activas ni desconectadas</p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
@@ -138,15 +138,15 @@ export default function SessionsPage() {
                                             <TableCell>
                                                 <Badge className={`text-xs ${stateColors[session.state] || ""}`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${session.state === "Active" ? "bg-emerald-500 animate-pulse-dot" :
-                                                            session.state === "Idle" ? "bg-amber-500" : "bg-red-500"
+                                                        session.state === "Idle" ? "bg-amber-500" : "bg-red-500"
                                                         }`} />
                                                     {session.state === "Active" ? "Activa" : session.state === "Idle" ? "Inactiva" : "Desconectada"}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="font-mono text-sm">{session.session_id}</TableCell>
-                                            <TableCell className="flex items-center gap-1 text-sm">
+                                            <TableCell className="flex items-center gap-1 text-sm text-foreground/80 font-mono">
                                                 <Clock className="w-3 h-3 text-muted-foreground" />
-                                                {session.idle_time || "00:00:00"}
+                                                {session.idle_time === "0" ? "00:00 (Activo)" : session.idle_time ? `${session.idle_time}` : "—"}
                                             </TableCell>
                                             <TableCell className="font-mono text-xs">
                                                 <div className="flex items-center gap-1">
@@ -154,9 +154,11 @@ export default function SessionsPage() {
                                                     {session.source_ip || "—"}
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-xs text-muted-foreground">
+                                            <TableCell className="text-sm font-medium">
                                                 {session.logon_time
-                                                    ? new Date(session.logon_time).toLocaleString("es-PE")
+                                                    ? new Date(session.logon_time).toLocaleString("es-PE", {
+                                                        day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit"
+                                                    })
                                                     : "—"}
                                             </TableCell>
                                         </TableRow>

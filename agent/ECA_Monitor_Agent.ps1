@@ -70,56 +70,73 @@ function Get-DiskUsage {
 function Get-RdpSessions {
     $sessions = @()
     try {
-        # qwinsta output parsing - supports both English and Spanish Windows
-        $output = qwinsta 2>$null
+        # quser output parsing - supports both English and Spanish Windows, session and no-session names
+        $output = quser 2>$null
         if (-not $output) { return $sessions }
         
         $output | Select-Object -Skip 1 | ForEach-Object {
-            # Remove leading '>' that marks the current session
-            $line = $_ -replace '^>', ' '
+            $line = $_ -replace '^>', ''
             $line = $line.Trim() -replace '\s+', ' '
-            $parts = $line.Split(' ')
+            $parts = $line -split ' '
             
-            if ($parts.Length -ge 3) {
-                $username = $null
-                $sessionId = $null
-                $state = $null
-                
-                # Pattern 1: SESSIONNAME USERNAME ID STATE
-                if ($parts.Length -ge 4 -and $parts[2] -match '^\d+$') {
-                    $username = $parts[1]
-                    $sessionId = $parts[2]
-                    $state = $parts[3]
+            $username = $parts[0]
+            $logonTime = ""
+            $idleTime = ""
+            $state = ""
+            $sessionId = ""
+            
+            # Find the index of the connection state to anchor the parsing securely
+            $stateIdx = -1
+            for ($i = 0; $i -lt $parts.Length; $i++) {
+                if ($parts[$i] -match '^(Active|Disc|Conn|Activo|Desc)$') {
+                    $stateIdx = $i
+                    break
                 }
-                # Pattern 2: USERNAME ID STATE (when session name is empty)
-                elseif ($parts[1] -match '^\d+$') {
-                    $username = $parts[0]
-                    $sessionId = $parts[1]
-                    $state = $parts[2]
+            }
+            
+            if ($stateIdx -gt 0) {
+                $state = $parts[$stateIdx]
+                $sessionId = $parts[$stateIdx - 1]
+                
+                if ($stateIdx + 1 -lt $parts.Length) {
+                    $idleTime = $parts[$stateIdx + 1]
+                    if ($idleTime -eq ".") { $idleTime = "0" } # . means active/no idle
                 }
                 
-                if ($username -and $sessionId -and $state) {
-                    if ($username -match '^[a-zA-Z0-9_\.\-]+$' -and $username -notmatch '^(services|console|rdp-tcp|rdp-sxs|65536)$') {
-                        # Support English (Active/Disc) AND Spanish (Activo/Desc)
-                        $isActive = $state -match '^(Active|Activo)$'
-                        $isDisc = $state -match '^(Disc|Desc)$'
-                        
-                        if ($isActive -or $isDisc) {
-                            $status = if ($isActive) { "Active" } else { "Disconnected" }
-                            $sessions += @{
-                                username = $username
-                                session_id = [int]$sessionId
-                                state = $status
-                                idle_time = ""
-                                source_ip = ""
-                            }
+                if ($stateIdx + 2 -lt $parts.Length) {
+                    $logonTimeRaw = $parts[($stateIdx + 2)..($parts.Length - 1)] -join " "
+                    # Try to convert to ISO string for the frontend, fallback to raw
+                    try {
+                        $logonTimeDt = [datetime]::Parse($logonTimeRaw)
+                        $logonTime = $logonTimeDt.ToString("yyyy-MM-ddTHH:mm:ss")
+                    } catch {
+                        $logonTime = $logonTimeRaw
+                    }
+                }
+                
+                # Check source IP (rudimentary check using netstat for port 3389 - optional extra)
+                $sourceIp = ""
+                
+                if ($username -match '^[a-zA-Z0-9_\.\-]+$' -and $username -notmatch '^(services|console|65536)$') {
+                    $isActive = $state -match '^(Active|Conn|Activo)$'
+                    $isDisc = $state -match '^(Disc|Desc)$'
+                    
+                    if ($isActive -or $isDisc) {
+                        $status = if ($isActive) { "Active" } else { "Disconnected" }
+                        $sessions += @{
+                            username = $username
+                            session_id = [int]$sessionId
+                            state = $status
+                            idle_time = $idleTime
+                            logon_time = $logonTime
+                            source_ip = $sourceIp
                         }
                     }
                 }
             }
         }
     } catch {
-        Write-Warning "Error parsing qwinsta: $_"
+        Write-Warning "Error parsing quser: $_"
     }
     return $sessions
 }
