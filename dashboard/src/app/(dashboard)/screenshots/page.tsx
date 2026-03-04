@@ -28,6 +28,7 @@ export default function ScreenshotsPage() {
     const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotItem | null>(null);
     const [refreshKey, setRefreshKey] = useState(Date.now());
     const [imageTimestamps, setImageTimestamps] = useState<Record<string, number>>({});
+    const [base64Images, setBase64Images] = useState<Record<string, string>>({});
 
     async function fetchSessions() {
         try {
@@ -47,13 +48,19 @@ export default function ScreenshotsPage() {
         const socketIo = io();
 
         socketIo.on("connect", () => {
-            console.log("Connected to WebSocket for real-time screenshots");
+            console.log("Connected to WebSocket for real-time screenshots (Base64)");
         });
 
-        socketIo.on("screenshot:new", (data: { serverId: string; username: string; sessionId: number }) => {
+        socketIo.on("screenshot:new", (data: { serverId: string; username: string; sessionId: number; image?: string }) => {
             const key = `${data.serverId}-${data.username}-${data.sessionId}`;
-            // Instantly update just this specific image's cache-busting timestamp
-            setImageTimestamps((prev) => ({ ...prev, [key]: Date.now() }));
+
+            if (data.image) {
+                // If the backend sent the full Base64 image, use it directly (0 HTTP latency)
+                setBase64Images((prev) => ({ ...prev, [key]: data.image as string }));
+            } else {
+                // Fallback: Just update timestamp to force HTTP reload
+                setImageTimestamps((prev) => ({ ...prev, [key]: Date.now() }));
+            }
         });
 
         return () => {
@@ -82,7 +89,13 @@ export default function ScreenshotsPage() {
 
     function getScreenshotUrl(serverId: string, username: string, sessionId: number) {
         const key = `${serverId}-${username}-${sessionId}`;
-        // Use the real-time websocket timestamp if available, otherwise the 10s fallback polling key
+
+        // Priority 1: Instant Base64 image from WebSocket
+        if (base64Images[key]) {
+            return base64Images[key];
+        }
+
+        // Priority 2: Use the real-time websocket timestamp if available, otherwise the 10s fallback polling key
         const ts = imageTimestamps[key] || refreshKey;
         return `/api/screenshots/${serverId}/${username}_${sessionId}_thumb.jpg?t=${ts}`;
     }

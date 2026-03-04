@@ -59,8 +59,11 @@ export async function POST(request: NextRequest) {
 
     const imageUrl = `/screenshots/${serverId}/${filename}?t=${Date.now()}`;
 
+    // Convert to base64 to send directly via WebSocket
+    const base64Image = `data:image/jpeg;base64,${buffer.toString('base64')}`;
+
     // Emit WebSocket event for real-time frontend update
-    notifyNewScreenshot(serverId, username, parseInt(sessionId) || 0);
+    notifyNewScreenshot(serverId, username, parseInt(sessionId) || 0, base64Image);
 
     // Store for WebSocket emission (legacy fallback)
     if (typeof globalThis !== 'undefined') {
