@@ -6,6 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Camera, MonitorSmartphone, RefreshCw, Maximize2 } from "lucide-react";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import type { Session } from "@/types";
 import { io } from "socket.io-client";
 
@@ -29,6 +36,7 @@ export default function ScreenshotsPage() {
     const [refreshKey, setRefreshKey] = useState(Date.now());
     const [imageTimestamps, setImageTimestamps] = useState<Record<string, number>>({});
     const [base64Images, setBase64Images] = useState<Record<string, string>>({});
+    const [statusFilter, setStatusFilter] = useState<string>("active");
 
     async function fetchSessions() {
         try {
@@ -78,8 +86,12 @@ export default function ScreenshotsPage() {
         return () => clearInterval(interval);
     }, []);
 
-    // Group sessions by server
+    // Group sessions by server and filter by status
     const sessionsByServer = sessions.reduce<Record<string, Session[]>>((acc, session) => {
+        const isOffline = session.state !== "Active";
+        if (statusFilter === "active" && isOffline) return acc;
+        if (statusFilter === "offline" && !isOffline) return acc;
+
         if (!acc[session.server_id]) acc[session.server_id] = [];
         acc[session.server_id].push(session);
         return acc;
@@ -104,20 +116,32 @@ export default function ScreenshotsPage() {
                 <div>
                     <h1 className="text-2xl font-bold">Pantallas en Tiempo Real</h1>
                     <p className="text-muted-foreground text-sm mt-1">
-                        Mosaico de sesiones activas — Actualización cada 10 segundos
+                        Mosaico de sesiones — Actualización cada 10 segundos
                     </p>
                 </div>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                        fetchSessions();
-                        setRefreshKey((k) => k + 1);
-                    }}
-                >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Actualizar
-                </Button>
+                <div className="flex items-center gap-3">
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Filtrar por estado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todas las sesiones</SelectItem>
+                            <SelectItem value="active">Solo Activas (Online)</SelectItem>
+                            <SelectItem value="offline">Solo Fuera de línea</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            fetchSessions();
+                            setRefreshKey((k) => k + 1);
+                        }}
+                    >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Actualizar
+                    </Button>
+                </div>
             </div>
 
             {loading ? (
