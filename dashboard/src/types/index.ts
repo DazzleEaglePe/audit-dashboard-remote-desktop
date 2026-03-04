@@ -66,7 +66,7 @@ export interface Alert {
 export interface AgentSessionData {
   username: string;
   session_id: number;
-  state: string;
+  state: 'Active' | 'Idle' | 'Disconnected';
   idle_time: string;
   logon_time: string;
   source_ip: string;
