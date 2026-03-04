@@ -32,60 +32,94 @@ $headers = @{
 }
 
 function Get-CpuUsage {
-    $cpu = @(Get-WmiObject Win32_Processor)
-    if ($cpu.Count -eq 0) { return 0 }
-    
-    $total = 0
-    foreach ($c in $cpu) { $total += $c.LoadPercentage }
-    return [Math]::Round(($total / $cpu.Count), 1)
+    try {
+        $cpu = @(Get-WmiObject Win32_Processor -ErrorAction SilentlyContinue)
+        if (-not $cpu -or $cpu.Count -eq 0) { return 0 }
+        $total = 0
+        foreach ($c in $cpu) { $total += $c.LoadPercentage }
+        $count = $cpu.Count
+        if ($count -eq 0) { return 0 }
+        return [Math]::Round(($total / $count), 1)
+    } catch { return 0 }
 }
 
 function Get-MemoryUsage {
-    $os = Get-WmiObject Win32_OperatingSystem
-    if (-not $os -or $os.TotalVisibleMemorySize -eq 0) { return @{ Total = 0; Used = 0 } }
-    
-    $totalMB = [Math]::Round($os.TotalVisibleMemorySize / 1024, 0)
-    $freeMB = [Math]::Round($os.FreePhysicalMemory / 1024, 0)
-    $usedMB = $totalMB - $freeMB
-    return @{ Total = $totalMB; Used = $usedMB }
+    try {
+        $os = Get-WmiObject Win32_OperatingSystem -ErrorAction SilentlyContinue
+        if (-not $os -or $os.TotalVisibleMemorySize -eq 0) { return @{ Total = 0; Used = 0 } }
+        $totalMB = [Math]::Round($os.TotalVisibleMemorySize / 1024, 0)
+        $freeMB = [Math]::Round($os.FreePhysicalMemory / 1024, 0)
+        $usedMB = $totalMB - $freeMB
+        return @{ Total = $totalMB; Used = $usedMB }
+    } catch { return @{ Total = 0; Used = 0 } }
 }
 
 function Get-DiskUsage {
-    $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
-    if (-not $disk -or $disk.Size -eq 0) { return 0 }
-    
-    $totalGB = $disk.Size / 1GB
-    $freeGB = $disk.FreeSpace / 1GB
-    $usedGB = $totalGB - $freeGB
-    $percent = ($usedGB / $totalGB) * 100
-    return [Math]::Round($percent, 1)
+    try {
+        $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'" -ErrorAction SilentlyContinue
+        if (-not $disk -or $disk.Size -eq 0) { return 0 }
+        $totalGB = $disk.Size / 1GB
+        $freeGB = $disk.FreeSpace / 1GB
+        $usedGB = $totalGB - $freeGB
+        if ($totalGB -eq 0) { return 0 }
+        $percent = ($usedGB / $totalGB) * 100
+        return [Math]::Round($percent, 1)
+    } catch { return 0 }
 }
 
 function Get-RdpSessions {
     $sessions = @()
-    # qwinsta output parsing
-    $output = qwinsta
-    $output | Select-Object -Skip 1 | ForEach-Object {
-        $line = $_.Trim() -replace '\s+', ' '
-        $parts = $line.Split(' ')
+    try {
+        # qwinsta output parsing - supports both English and Spanish Windows
+        $output = qwinsta 2>$null
+        if (-not $output) { return $sessions }
         
-        # Valid user sessions usually have a USERNAME
-        if ($parts.Length -ge 4 -and $parts[1] -match '^[a-zA-Z0-9_-]+$') {
-            $username = $parts[1]
-            $sessionId = $parts[2]
-            $state = $parts[3]
-
-            if ($state -eq 'Active' -or $state -eq 'Disc') {
-                $status = if ($state -eq 'Active') { "Active" } else { "Disconnected" }
-                $sessions += @{
-                    username = $username
-                    session_id = [int]$sessionId
-                    state = $status
-                    idle_time = ""
-                    source_ip = "" # We could parse netstat for this
+        $output | Select-Object -Skip 1 | ForEach-Object {
+            # Remove leading '>' that marks the current session
+            $line = $_ -replace '^>', ' '
+            $line = $line.Trim() -replace '\s+', ' '
+            $parts = $line.Split(' ')
+            
+            if ($parts.Length -ge 3) {
+                $username = $null
+                $sessionId = $null
+                $state = $null
+                
+                # Pattern 1: SESSIONNAME USERNAME ID STATE
+                if ($parts.Length -ge 4 -and $parts[2] -match '^\d+$') {
+                    $username = $parts[1]
+                    $sessionId = $parts[2]
+                    $state = $parts[3]
+                }
+                # Pattern 2: USERNAME ID STATE (when session name is empty)
+                elseif ($parts[1] -match '^\d+$') {
+                    $username = $parts[0]
+                    $sessionId = $parts[1]
+                    $state = $parts[2]
+                }
+                
+                if ($username -and $sessionId -and $state) {
+                    if ($username -match '^[a-zA-Z0-9_\.\-]+$' -and $username -notmatch '^(services|console|rdp-tcp|rdp-sxs|65536)$') {
+                        # Support English (Active/Disc) AND Spanish (Activo/Desc)
+                        $isActive = $state -match '^(Active|Activo)$'
+                        $isDisc = $state -match '^(Disc|Desc)$'
+                        
+                        if ($isActive -or $isDisc) {
+                            $status = if ($isActive) { "Active" } else { "Disconnected" }
+                            $sessions += @{
+                                username = $username
+                                session_id = [int]$sessionId
+                                state = $status
+                                idle_time = ""
+                                source_ip = ""
+                            }
+                        }
+                    }
                 }
             }
         }
+    } catch {
+        Write-Warning "Error parsing qwinsta: $_"
     }
     return $sessions
 }
@@ -96,7 +130,7 @@ Write-Host "Reporting to $apiUrl"
 $lastScreenshotTime = [DateTime]::MinValue
 
 while ($true) {
-    # ─── 1. Heartbeat & Metrics ───
+    # --- 1. Heartbeat & Metrics ---
     try {
         $cpu = Get-CpuUsage
         $mem = Get-MemoryUsage
@@ -127,7 +161,7 @@ while ($true) {
         Write-Warning "[$(Get-Date -Format 'HH:mm:ss')] Failed to send heartbeat: $_"
     }
     
-    # ─── 2. Screenshots (every screenshot_interval seconds) ───
+    # --- 2. Screenshots (every screenshot_interval seconds) ---
     $now = Get-Date
     if (($now - $lastScreenshotTime).TotalSeconds -ge $config.screenshot_interval) {
         $lastScreenshotTime = $now
@@ -155,7 +189,6 @@ while ($true) {
                     
                     if (Test-Path $thumbPath) {
                         # Upload using curl.exe (built into Win10 1803+)
-                        # PS 5.1 multipart form upload is complex, curl is robust
                         $curlArgs = @(
                             "-X", "POST",
                             "-H", "x-api-key: $apiKey",
@@ -178,7 +211,7 @@ while ($true) {
                 }
             }
         } else {
-            Write-Warning "psexec.exe no se encontró en $agentDir. No se tomarán capturas."
+            Write-Warning "psexec.exe no se encontro en $agentDir. No se tomaran capturas."
         }
     }
 
