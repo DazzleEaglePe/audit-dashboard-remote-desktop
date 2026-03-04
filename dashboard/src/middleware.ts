@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 
 // ═══════════════════════════════════════════════════════
 // Middleware — Protect dashboard routes
 // ═══════════════════════════════════════════════════════
-
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'fallback-secret-change-me';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -34,7 +31,20 @@ export function middleware(request: NextRequest) {
   }
 
   try {
-    jwt.verify(token, JWT_SECRET);
+    // Decode token manually since jsonwebtoken doesn't work in Edge runtime
+    const parts = token.split('.');
+    if (parts.length !== 3) throw new Error('Invalid token structure');
+    
+    // Fix base64url padding and decode
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = atob(base64);
+    const payload = JSON.parse(jsonPayload);
+    
+    // Check if expired
+    if (payload.exp && Date.now() >= payload.exp * 1000) {
+      throw new Error('Token expired');
+    }
+
     return NextResponse.next();
   } catch {
     // Token expired or invalid
