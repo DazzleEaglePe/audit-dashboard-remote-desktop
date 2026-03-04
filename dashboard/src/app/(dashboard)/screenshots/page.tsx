@@ -45,7 +45,7 @@ export default function ScreenshotsPage() {
         const interval = setInterval(() => {
             fetchSessions();
             setRefreshKey((k) => k + 1);
-        }, 10000);
+        }, 3000);
         return () => clearInterval(interval);
     }, []);
 
