@@ -161,57 +161,48 @@ while ($true) {
         Write-Warning "[$(Get-Date -Format 'HH:mm:ss')] Failed to send heartbeat: $_"
     }
     
-    # --- 2. Screenshots (every screenshot_interval seconds) ---
+    # --- 2. Screenshots: scan temp folder for captures from Session-Capture-Loop ---
     $now = Get-Date
     if (($now - $lastScreenshotTime).TotalSeconds -ge $config.screenshot_interval) {
         $lastScreenshotTime = $now
         
-        $psexecPath = Join-Path $agentDir "psexec.exe"
-        $captureScript = Join-Path $agentDir "Capture-Screenshot.ps1"
         $tempDir = Join-Path $agentDir "temp"
+        if (-not (Test-Path $tempDir)) {
+            New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+        }
         
-        if (Test-Path $psexecPath) {
-            # Only screenshot 'Active' sessions
-            $activeSessions = $sessions | Where-Object { $_.state -eq 'Active' }
-            
-            foreach ($session in $activeSessions) {
-                $sessionId = $session.session_id
-                $username = $session.username
-                $thumbPath = Join-Path $tempDir "${username}_${sessionId}_thumb.jpg"
+        # Look for screenshot files placed by Session-Capture-Loop.ps1
+        $thumbFiles = Get-ChildItem -Path $tempDir -Filter "*_thumb.jpg" -ErrorAction SilentlyContinue
+        
+        foreach ($file in $thumbFiles) {
+            try {
+                # Parse username and session ID from filename: username_sessionId_thumb.jpg
+                $nameParts = $file.BaseName -replace '_thumb$', '' -split '_'
+                if ($nameParts.Length -ge 2) {
+                    $username = $nameParts[0..($nameParts.Length - 2)] -join '_'
+                    $sessionId = $nameParts[-1]
+                } else {
+                    $username = $file.BaseName -replace '_thumb$', ''
+                    $sessionId = "0"
+                }
                 
-                try {
-                    # Execute capture script inside the target user's session
-                    $psexecArgs = "-accepteula", "-s", "-i", $sessionId, "-d", "powershell.exe", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File", "`"$captureScript`"", "-OutPath", "`"$thumbPath`""
-                    Start-Process -FilePath $psexecPath -ArgumentList $psexecArgs -WindowStyle Hidden -Wait | Out-Null
-                    
-                    # Give it a second to save the file
-                    Start-Sleep -Seconds 1
-                    
-                    if (Test-Path $thumbPath) {
-                        # Upload using curl.exe (built into Win10 1803+)
-                        $curlArgs = @(
-                            "-X", "POST",
-                            "-H", "x-api-key: $apiKey",
-                            "-F", "server_id=$serverId",
-                            "-F", "username=$username",
-                            "-F", "session_id=$sessionId",
-                            "-F", "image=@$thumbPath",
-                            "--silent", "--show-error",
-                            "$apiUrl/agent/screenshot"
-                        )
-                        $curlOutput = & curl.exe @curlArgs
-                        Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Screenshot uploaded for $username ($sessionId)"
-                        
-                        # Cleanup
-                        Remove-Item $thumbPath -Force
-                    }
-                }
-                catch {
-                    Write-Warning "[$(Get-Date -Format 'HH:mm:ss')] Failed to capture/upload screenshot for $username ($sessionId): $_"
-                }
+                # Upload using curl.exe (built into Win10 1803+)
+                $curlArgs = @(
+                    "-X", "POST",
+                    "-H", "x-api-key: $apiKey",
+                    "-F", "server_id=$serverId",
+                    "-F", "username=$username",
+                    "-F", "session_id=$sessionId",
+                    "-F", "image=@$($file.FullName)",
+                    "--silent", "--show-error",
+                    "$apiUrl/agent/screenshot"
+                )
+                $curlOutput = & curl.exe @curlArgs
+                Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Screenshot uploaded for $username (session $sessionId)"
             }
-        } else {
-            Write-Warning "psexec.exe no se encontro en $agentDir. No se tomaran capturas."
+            catch {
+                Write-Warning "[$(Get-Date -Format 'HH:mm:ss')] Failed to upload screenshot $($file.Name): $_"
+            }
         }
     }
 
