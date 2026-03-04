@@ -70,8 +70,16 @@ function Get-DiskUsage {
 function Get-RdpSessions {
     $sessions = @()
     try {
-        # quser output parsing - supports both English and Spanish Windows, session and no-session names
-        $output = quser 2>$null
+        # quser output parsing - avoiding console flash using .NET Process
+        $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+        $pinfo.FileName = "quser.exe"
+        $pinfo.UseShellExecute = $false
+        $pinfo.RedirectStandardOutput = $true
+        $pinfo.CreateNoWindow = $true
+        $p = [System.Diagnostics.Process]::Start($pinfo)
+        $output = $p.StandardOutput.ReadToEnd() -split "`n"
+        $p.WaitForExit()
+        
         if (-not $output) { return $sessions }
         
         $output | Select-Object -Skip 1 | ForEach-Object {
@@ -203,18 +211,18 @@ while ($true) {
                     $sessionId = "0"
                 }
                 
-                # Upload using curl.exe (built into Win10 1803+)
-                $curlArgs = @(
-                    "-X", "POST",
-                    "-H", "x-api-key: $apiKey",
-                    "-F", "server_id=$serverId",
-                    "-F", "username=$username",
-                    "-F", "session_id=$sessionId",
-                    "-F", "image=@$($file.FullName)",
-                    "--silent", "--show-error",
-                    "$apiUrl/agent/screenshot"
-                )
-                $curlOutput = & curl.exe @curlArgs
+                # Upload using curl.exe but suppress the console window flash via .NET
+                $curlArgs = "-X POST -H `"x-api-key: $apiKey`" -F `"server_id=$serverId`" -F `"username=$username`" -F `"session_id=$sessionId`" -F `"image=@$($file.FullName)`" --silent --show-error `"$apiUrl/agent/screenshot`""
+                
+                $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+                $pinfo.FileName = "curl.exe"
+                $pinfo.Arguments = $curlArgs
+                $pinfo.UseShellExecute = $false
+                $pinfo.CreateNoWindow = $true
+                $pinfo.WindowStyle = "Hidden"
+                $p = [System.Diagnostics.Process]::Start($pinfo)
+                $p.WaitForExit()
+
                 Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Screenshot uploaded for $username (session $sessionId)"
             }
             catch {
