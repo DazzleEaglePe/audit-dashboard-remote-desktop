@@ -59,7 +59,7 @@ export default function ScreenshotsPage() {
     }, {});
 
     function getScreenshotUrl(serverId: string, username: string, sessionId: number) {
-        return `/screenshots/${serverId}/${username}_${sessionId}_thumb.jpg?t=${refreshKey}`;
+        return `/api/screenshots/${serverId}/${username}_${sessionId}_thumb.jpg?t=${refreshKey}`;
     }
 
     return (
