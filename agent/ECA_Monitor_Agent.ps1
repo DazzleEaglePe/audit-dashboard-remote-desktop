@@ -8,6 +8,10 @@ Takes screenshots of active RDP sessions and uploads them.
 #>
 
 $ErrorActionPreference = "Stop"
+
+# Force TLS 1.2 for Invoke-RestMethod (fixes issues on Win10/PS5.1 connecting to modern HTTPS)
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
 $agentDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $configFile = Join-Path $agentDir "config.json"
 
@@ -28,7 +32,9 @@ $headers = @{
 }
 
 function Get-CpuUsage {
-    $cpu = Get-WmiObject Win32_Processor
+    $cpu = @(Get-WmiObject Win32_Processor)
+    if ($cpu.Count -eq 0) { return 0 }
+    
     $total = 0
     foreach ($c in $cpu) { $total += $c.LoadPercentage }
     return [Math]::Round(($total / $cpu.Count), 1)
@@ -36,6 +42,8 @@ function Get-CpuUsage {
 
 function Get-MemoryUsage {
     $os = Get-WmiObject Win32_OperatingSystem
+    if (-not $os -or $os.TotalVisibleMemorySize -eq 0) { return @{ Total = 0; Used = 0 } }
+    
     $totalMB = [Math]::Round($os.TotalVisibleMemorySize / 1024, 0)
     $freeMB = [Math]::Round($os.FreePhysicalMemory / 1024, 0)
     $usedMB = $totalMB - $freeMB
@@ -44,6 +52,8 @@ function Get-MemoryUsage {
 
 function Get-DiskUsage {
     $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
+    if (-not $disk -or $disk.Size -eq 0) { return 0 }
+    
     $totalGB = $disk.Size / 1GB
     $freeGB = $disk.FreeSpace / 1GB
     $usedGB = $totalGB - $freeGB
