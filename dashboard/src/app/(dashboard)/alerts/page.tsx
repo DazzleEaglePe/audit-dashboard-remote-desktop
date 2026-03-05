@@ -16,30 +16,26 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Alert } from "@/types";
+import { useLanguage } from "@/components/language-provider";
 
-const ALERT_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+const ALERT_CONFIG: Record<string, { icon: React.ElementType; color: string }> = {
     server_down: {
-        label: "Servidor Caído",
         icon: Server,
         color: "text-red-500",
     },
     session_idle: {
-        label: "Sesión Inactiva",
         icon: Clock,
         color: "text-amber-500",
     },
     high_cpu: {
-        label: "CPU Alto",
         icon: Cpu,
         color: "text-orange-500",
     },
     login_failed: {
-        label: "Login Fallido",
         icon: UserX,
         color: "text-red-400",
     },
     rdp_wrapper_broken: {
-        label: "RDP Wrapper Roto",
         icon: Shield,
         color: "text-red-600",
     },
@@ -52,6 +48,7 @@ const SEVERITY_COLORS: Record<string, string> = {
 };
 
 export default function AlertsPage() {
+    const { t } = useLanguage();
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [loading, setLoading] = useState(true);
     const [showUnreadOnly, setShowUnreadOnly] = useState(false);
@@ -86,10 +83,10 @@ export default function AlertsPage() {
                 setAlerts((prev) =>
                     prev.map((a) => (a.id === alertId ? { ...a, is_read: 1 } : a))
                 );
-                toast.success("Alerta marcada como leída");
+                toast.success(t("alerts.markReadToast"));
             }
         } catch {
-            toast.error("Error al actualizar alerta");
+            toast.error(t("alerts.errorToast"));
         }
     }
 
@@ -103,7 +100,7 @@ export default function AlertsPage() {
             });
         }
         setAlerts((prev) => prev.map((a) => ({ ...a, is_read: 1 })));
-        toast.success(`${unread.length} alertas marcadas como leídas`);
+        toast.success(`${unread.length} ${t("alerts.markAllReadToast")}`);
     }
 
     const unreadCount = alerts.filter((a) => a.is_read === 0).length;
@@ -112,9 +109,9 @@ export default function AlertsPage() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold">Alertas</h1>
+                    <h1 className="text-2xl font-bold">{t("alerts.title")}</h1>
                     <p className="text-muted-foreground text-sm mt-1">
-                        {unreadCount} alertas sin leer
+                        {unreadCount} {t("alerts.unreadAlerts")}
                     </p>
                 </div>
                 <div className="flex gap-2">
@@ -124,12 +121,12 @@ export default function AlertsPage() {
                         onClick={() => setShowUnreadOnly(!showUnreadOnly)}
                     >
                         <Bell className="w-4 h-4 mr-2" />
-                        {showUnreadOnly ? "Mostrando sin leer" : "Ver solo sin leer"}
+                        {showUnreadOnly ? t("alerts.showingUnread") : t("alerts.showOnlyUnread")}
                     </Button>
                     {unreadCount > 0 && (
                         <Button variant="outline" size="sm" onClick={markAllRead}>
                             <CheckCircle className="w-4 h-4 mr-2" />
-                            Marcar todas leídas
+                            {t("alerts.markAllRead")}
                         </Button>
                     )}
                 </div>
@@ -147,18 +144,25 @@ export default function AlertsPage() {
                 <Card className="glass border-border/30">
                     <CardContent className="py-16 text-center text-muted-foreground">
                         <CheckCircle className="w-16 h-16 mx-auto mb-4 opacity-20 text-emerald-500" />
-                        <p className="text-lg">Todo en orden</p>
-                        <p className="text-sm mt-1">No hay alertas {showUnreadOnly ? "sin leer" : ""}</p>
+                        <p className="text-lg">{t("alerts.allClear")}</p>
+                        <p className="text-sm mt-1">{t("alerts.noAlertsPrefix")} {showUnreadOnly ? t("alerts.noAlertsSuffix") : ""}</p>
                     </CardContent>
                 </Card>
             ) : (
                 <div className="space-y-2">
                     {alerts.map((alert) => {
                         const config = ALERT_CONFIG[alert.alert_type] || {
-                            label: alert.alert_type,
                             icon: AlertTriangle,
                             color: "text-muted-foreground",
                         };
+
+                        let label: string = alert.alert_type;
+                        if (alert.alert_type === "server_down") label = t("alerts.serverDown");
+                        if (alert.alert_type === "session_idle") label = t("alerts.sessionIdle");
+                        if (alert.alert_type === "high_cpu") label = t("alerts.highCpu");
+                        if (alert.alert_type === "login_failed") label = t("alerts.loginFailed");
+                        if (alert.alert_type === "rdp_wrapper_broken") label = t("alerts.rdpBroken");
+
                         const AlertIcon = config.icon;
                         const isUnread = alert.is_read === 0;
 
@@ -176,9 +180,9 @@ export default function AlertsPage() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-medium text-sm">{config.label}</span>
+                                                <span className="font-medium text-sm">{label}</span>
                                                 <Badge className={`text-[10px] ${SEVERITY_COLORS[alert.severity] || ""}`}>
-                                                    {alert.severity === "critical" ? "Crítico" : alert.severity === "warning" ? "Advertencia" : "Info"}
+                                                    {alert.severity === "critical" ? t("alerts.sevCritical") : alert.severity === "warning" ? t("alerts.sevWarning") : t("alerts.sevInfo")}
                                                 </Badge>
                                                 {alert.server_id && (
                                                     <Badge variant="secondary" className="text-[10px] font-mono">

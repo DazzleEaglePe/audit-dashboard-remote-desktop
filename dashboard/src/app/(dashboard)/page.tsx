@@ -15,6 +15,7 @@ import {
     WifiOff,
 } from "lucide-react";
 import type { ServerWithMetrics, DashboardStats } from "@/types";
+import { useLanguage } from "@/components/language-provider";
 
 // ─── Stat Card Component ───
 function StatCard({
@@ -59,6 +60,7 @@ function StatCard({
 
 // ─── Server Card Component ───
 function ServerCard({ server }: { server: ServerWithMetrics }) {
+    const { t } = useLanguage();
     const isOnline = server.status === "online";
     const cpuPercent = server.metrics?.cpu_percent ?? 0;
     const ramPercent = server.metrics
@@ -156,7 +158,7 @@ function ServerCard({ server }: { server: ServerWithMetrics }) {
                         <div>
                             <div className="flex items-center justify-between text-xs mb-1">
                                 <span className="text-muted-foreground flex items-center gap-1">
-                                    <HardDrive className="w-3 h-3" /> Disco
+                                    <HardDrive className="w-3 h-3" /> {server.metrics.disk_percent !== undefined ? "Disk" : "Disco"}
                                 </span>
                                 <span className={diskPercent > 90 ? "text-red-500" : "text-muted-foreground"}>
                                     {diskPercent.toFixed(1)}%
@@ -172,7 +174,7 @@ function ServerCard({ server }: { server: ServerWithMetrics }) {
 
                 {/* Active sessions count */}
                 <div className="flex items-center justify-between pt-2 border-t border-border/30">
-                    <span className="text-xs text-muted-foreground">Sesiones activas</span>
+                    <span className="text-xs text-muted-foreground">{t("dashboard.activeSessionsCount")}</span>
                     <Badge variant="secondary" className="font-mono">
                         <Users className="w-3 h-3 mr-1" />
                         {server.active_sessions_count ?? 0}
@@ -185,6 +187,7 @@ function ServerCard({ server }: { server: ServerWithMetrics }) {
 
 // ─── Main Dashboard Page ───
 export default function DashboardPage() {
+    const { t } = useLanguage();
     const [servers, setServers] = useState<ServerWithMetrics[]>([]);
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
@@ -219,8 +222,8 @@ export default function DashboardPage() {
         return (
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-2xl font-bold">Dashboard</h1>
-                    <p className="text-muted-foreground text-sm mt-1">Cargando datos...</p>
+                    <h1 className="text-2xl font-bold">{t("dashboard.title")}</h1>
+                    <p className="text-muted-foreground text-sm mt-1">{t("dashboard.loading")}</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {[1, 2, 3, 4].map((i) => (
@@ -237,40 +240,40 @@ export default function DashboardPage() {
         <div className="space-y-8">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold">Dashboard</h1>
+                <h1 className="text-2xl font-bold">{t("dashboard.title")}</h1>
                 <p className="text-muted-foreground text-sm mt-1">
-                    Monitoreo en tiempo real — ECA Estudio Contable
+                    {t("dashboard.subtitle")}
                 </p>
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
-                    title="Servidores"
+                    title={t("dashboard.serversTitle")}
                     value={`${stats?.online_servers ?? 0} / ${stats?.total_servers ?? 3}`}
                     icon={Server}
-                    description="Online / Total"
+                    description={t("dashboard.serversDesc")}
                     variant={stats?.online_servers === stats?.total_servers ? "success" : "warning"}
                 />
                 <StatCard
-                    title="Sesiones Activas"
+                    title={t("dashboard.activeSessions")}
                     value={stats?.total_active_sessions ?? 0}
                     icon={Users}
-                    description="Usuarios conectados"
+                    description={t("dashboard.usersConnected")}
                     variant="default"
                 />
                 <StatCard
-                    title="Estado General"
-                    value={stats?.online_servers === stats?.total_servers ? "Normal" : "Atención"}
+                    title={t("dashboard.generalState")}
+                    value={stats?.online_servers === stats?.total_servers ? t("dashboard.stateNormal") : t("dashboard.stateAttention")}
                     icon={Activity}
-                    description="Sistema operativo"
+                    description={t("dashboard.osSystem")}
                     variant={stats?.online_servers === stats?.total_servers ? "success" : "warning"}
                 />
                 <StatCard
-                    title="Alertas"
+                    title={t("dashboard.alertsTitle")}
                     value={stats?.unread_alerts ?? 0}
                     icon={AlertTriangle}
-                    description="Sin leer"
+                    description={t("dashboard.alertsUnread")}
                     variant={
                         (stats?.unread_alerts ?? 0) > 0 ? "destructive" : "success"
                     }
@@ -279,7 +282,7 @@ export default function DashboardPage() {
 
             {/* Server Cards */}
             <div>
-                <h2 className="text-lg font-semibold mb-4">Servidores</h2>
+                <h2 className="text-lg font-semibold mb-4">{t("dashboard.serversTitle")}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {servers.map((server) => (
                         <ServerCard key={server.id} server={server} />

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Monitor, Clock, Wifi, User } from "lucide-react";
 import type { Session } from "@/types";
+import { useLanguage } from "@/components/language-provider";
 
 const SERVER_NAMES: Record<string, string> = {
     srv1: "DESKTOP-E4F6THB",
@@ -28,6 +29,7 @@ const SERVER_NAMES: Record<string, string> = {
 };
 
 export default function SessionsPage() {
+    const { t } = useLanguage();
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(true);
     const [serverFilter, setServerFilter] = useState<string>("all");
@@ -66,22 +68,22 @@ export default function SessionsPage() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold">Sesiones de Servidor</h1>
+                    <h1 className="text-2xl font-bold">{t("sessions.title")}</h1>
                     <p className="text-muted-foreground text-sm mt-1">
-                        {filteredSessions.length} sesiones en{" "}
-                        {serverFilter === "all" ? "todos los servidores" : SERVER_NAMES[serverFilter]}
+                        {filteredSessions.length} {t("sessions.sessionsIn")}{" "}
+                        {serverFilter === "all" ? t("sessions.filterAll").toLowerCase() : SERVER_NAMES[serverFilter]}
                     </p>
                 </div>
 
                 <Select value={serverFilter} onValueChange={setServerFilter}>
                     <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Filtrar servidor" />
+                        <SelectValue placeholder={t("sessions.filterServer")} />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">Todos los servidores</SelectItem>
-                        <SelectItem value="srv1">Servidor 1</SelectItem>
-                        <SelectItem value="srv2">Servidor 2</SelectItem>
-                        <SelectItem value="srv3">Servidor 3</SelectItem>
+                        <SelectItem value="all">{t("sessions.filterAll")}</SelectItem>
+                        <SelectItem value="srv1">{t("sessions.server1")}</SelectItem>
+                        <SelectItem value="srv2">{t("sessions.server2")}</SelectItem>
+                        <SelectItem value="srv3">{t("sessions.server3")}</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -90,7 +92,7 @@ export default function SessionsPage() {
                 <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
                         <Monitor className="w-4 h-4 text-primary" />
-                        Historial y Sesiones Actuales
+                        {t("sessions.historyTitle")}
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -103,20 +105,20 @@ export default function SessionsPage() {
                     ) : filteredSessions.length === 0 ? (
                         <div className="text-center py-12 text-muted-foreground">
                             <Monitor className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                            <p>No hay sesiones activas ni desconectadas</p>
+                            <p>{t("sessions.noSessions")}</p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Usuario</TableHead>
-                                        <TableHead>Servidor</TableHead>
-                                        <TableHead>Estado</TableHead>
-                                        <TableHead>ID Sesión</TableHead>
-                                        <TableHead>Tiempo Inactivo</TableHead>
-                                        <TableHead>IP Origen</TableHead>
-                                        <TableHead>Hora Conexión</TableHead>
+                                        <TableHead>{t("sessions.colUser")}</TableHead>
+                                        <TableHead>{t("sessions.colServer")}</TableHead>
+                                        <TableHead>{t("sessions.colState")}</TableHead>
+                                        <TableHead>{t("sessions.colSessionId")}</TableHead>
+                                        <TableHead>{t("sessions.colIdle")}</TableHead>
+                                        <TableHead>{t("sessions.colIp")}</TableHead>
+                                        <TableHead>{t("sessions.colLogon")}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -140,13 +142,13 @@ export default function SessionsPage() {
                                                     <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${session.state === "Active" ? "bg-emerald-500 animate-pulse-dot" :
                                                         session.state === "Idle" ? "bg-amber-500" : "bg-red-500"
                                                         }`} />
-                                                    {session.state === "Active" ? "Activa" : session.state === "Idle" ? "Inactiva" : "Desconectada"}
+                                                    {session.state === "Active" ? t("sessions.stateActive") : session.state === "Idle" ? t("sessions.stateIdle") : t("sessions.stateDisconnected")}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="font-mono text-sm">{session.session_id}</TableCell>
                                             <TableCell className="flex items-center gap-1 text-sm text-foreground/80 font-mono">
                                                 <Clock className="w-3 h-3 text-muted-foreground" />
-                                                {session.idle_time === "0" ? "00:00 (Activo)" : session.idle_time ? `${session.idle_time}` : "—"}
+                                                {session.idle_time === "0" ? `00:00 ${t("sessions.idleActive")}` : session.idle_time ? `${session.idle_time}` : "—"}
                                             </TableCell>
                                             <TableCell className="font-mono text-xs">
                                                 <div className="flex items-center gap-1">

@@ -121,7 +121,7 @@
   }
 }
 
-/* Custom scrollbar for dark theme */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -130,18 +130,19 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.35 0.01 260);
+  background: var(--muted-foreground);
   border-radius: 3px;
+  opacity: 0.5;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.45 0.01 260);
+  background: var(--primary);
 }
 
 /* Glassmorphism utility */
 .glass {
-  background: oklch(0.155 0.008 260 / 0.6);
+  background: color-mix(in srgb, var(--card) 70%, transparent);
   backdrop-filter: blur(12px);
-  border: 1px solid oklch(0.25 0.01 260 / 0.5);
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
 }
 
 /* Status dot animation */

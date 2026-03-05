@@ -19,21 +19,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
-
-const navItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/sessions", label: "Sesiones", icon: Monitor },
-    { href: "/screenshots", label: "Pantallas", icon: Camera },
-    { href: "/logs", label: "Logs", icon: ScrollText },
-    { href: "/alerts", label: "Alertas", icon: Bell },
-];
+import { useLanguage } from "@/components/language-provider";
 
 export function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
+    const { t } = useLanguage();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [unreadAlerts, setUnreadAlerts] = useState(0);
+
+    const navItems = [
+        { href: "/", label: t("sidebar.dashboard"), icon: LayoutDashboard },
+        { href: "/sessions", label: t("sidebar.sessions"), icon: Monitor },
+        { href: "/screenshots", label: t("sidebar.screenshots"), icon: Camera },
+        { href: "/logs", label: t("sidebar.logs"), icon: ScrollText },
+        { href: "/alerts", label: t("sidebar.alerts"), icon: Bell },
+    ];
 
     useEffect(() => {
         // Hydrate collapse state from local storage or screen size
@@ -79,20 +81,20 @@ export function Sidebar() {
             const MySwal = withReactContent(Swal);
 
             const result = await MySwal.fire({
-                title: '¿Cerrar sesión?',
-                text: "Tendrás que volver a ingresar tus credenciales.",
+                title: t("sidebar.logoutConfirmTitle"),
+                text: t("sidebar.logoutConfirmText"),
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: 'hsl(var(--primary))',
-                cancelButtonColor: 'hsl(var(--muted))',
-                confirmButtonText: 'Sí, salir',
-                cancelButtonText: 'Cancelar',
-                background: 'hsl(var(--card))',
-                color: 'hsl(var(--foreground))',
+                confirmButtonText: t("sidebar.logoutConfirmYes"),
+                cancelButtonText: t("sidebar.logoutConfirmNo"),
+                background: 'var(--card)',
+                color: 'var(--foreground)',
                 customClass: {
-                    confirmButton: 'text-primary-foreground',
-                    cancelButton: 'text-foreground border border-border bg-transparent',
-                }
+                    popup: 'border border-border/50 rounded-xl',
+                    confirmButton: 'bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md font-medium transition-colors',
+                    cancelButton: 'bg-transparent text-foreground border border-border hover:bg-accent hover:text-accent-foreground px-4 py-2 rounded-md font-medium transition-colors ml-2',
+                },
+                buttonsStyling: false,
             });
 
             if (result.isConfirmed) {
@@ -102,7 +104,7 @@ export function Sidebar() {
             }
         } catch (error) {
             // Fallback in case chunk fails to load
-            if (window.confirm('¿Desea cerrar sesión? Tendrás que volver a ingresar tus credenciales.')) {
+            if (window.confirm(t("sidebar.logoutConfirmTitle") + " " + t("sidebar.logoutConfirmText"))) {
                 document.cookie = "auth-token=; path=/; max-age=0";
                 router.push("/login");
                 router.refresh();
@@ -119,8 +121,8 @@ export function Sidebar() {
                         <Shield className="w-5 h-5 text-primary" />
                     </div>
                     <div className={cn("transition-all duration-300 truncate", isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100")}>
-                        <h1 className="font-bold text-sm truncate">ECA Auditoría</h1>
-                        <p className="text-xs text-muted-foreground truncate">Monitoreo RDP</p>
+                        <h1 className="font-bold text-sm truncate">{t("sidebar.title")}</h1>
+                        <p className="text-xs text-muted-foreground truncate">{t("sidebar.subtitle")}</p>
                     </div>
                 </div>
             </div>
@@ -147,7 +149,7 @@ export function Sidebar() {
                             <span className={cn("transition-all duration-300 truncate", isCollapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100 block")}>
                                 {item.label}
                             </span>
-                            {item.label === "Alertas" && unreadAlerts > 0 && (
+                            {item.href === "/alerts" && unreadAlerts > 0 && (
                                 <Badge variant="destructive" className={cn("transition-all", isCollapsed ? "absolute top-1 right-2 w-2 h-2 p-0 rounded-full text-[0px]" : "ml-auto text-xs h-5 px-1.5")}>
                                     {!isCollapsed && unreadAlerts}
                                 </Badge>
@@ -163,10 +165,10 @@ export function Sidebar() {
                     variant="ghost"
                     className={cn("w-full gap-3 text-muted-foreground hover:text-foreground transition-all", isCollapsed ? "justify-center px-0" : "justify-start")}
                     onClick={handleLogout}
-                    title={isCollapsed ? "Cerrar sesión" : undefined}
+                    title={isCollapsed ? t("sidebar.logout") : undefined}
                 >
                     <LogOut className="w-5 h-5 shrink-0" />
-                    <span className={cn("transition-all duration-300 truncate", isCollapsed ? "w-0 opacity-0 hidden" : "block")}>Cerrar sesión</span>
+                    <span className={cn("transition-all duration-300 truncate", isCollapsed ? "w-0 opacity-0 hidden" : "block")}>{t("sidebar.logout")}</span>
                 </Button>
 
                 {/* Desktop Collapse Toggle */}
