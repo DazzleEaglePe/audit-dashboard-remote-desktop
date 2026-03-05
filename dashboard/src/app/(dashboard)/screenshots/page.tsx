@@ -89,6 +89,8 @@ export default function ScreenshotsPage() {
     // Group sessions by server and filter by status
     const sessionsByServer = sessions.reduce<Record<string, Session[]>>((acc, session) => {
         const isOffline = session.state !== "Active";
+        const isIdle = session.state === "Active" && session.idle_time && session.idle_time !== "0" && session.idle_time !== ".";
+
         if (statusFilter === "active" && isOffline) return acc;
         if (statusFilter === "offline" && !isOffline) return acc;
 
@@ -180,6 +182,8 @@ export default function ScreenshotsPage() {
                                     {serverSessions.map((session) => {
                                         const imgUrl = getScreenshotUrl(serverId, session.username, session.session_id);
                                         const isOffline = session.state !== "Active";
+                                        const isIdle = !isOffline && session.idle_time && session.idle_time !== "0" && session.idle_time !== ".";
+
                                         return (
                                             <Card
                                                 key={`${serverId}-${session.session_id}`}
@@ -216,8 +220,15 @@ export default function ScreenshotsPage() {
                                                                 </Badge>
                                                             </div>
                                                         )}
+                                                        {isIdle && (
+                                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/50 backdrop-blur-[2px] z-10 pointer-events-none">
+                                                                <Badge variant="outline" className="text-amber-500 bg-background/80 border-amber-500/30">
+                                                                    Inactiva ({session.idle_time})
+                                                                </Badge>
+                                                            </div>
+                                                        )}
                                                         <div
-                                                            className={`absolute inset-0 items-center justify-center text-muted-foreground/40 hidden ${isOffline ? '!hidden' : ''}`}
+                                                            className={`absolute inset-0 items-center justify-center text-muted-foreground/40 hidden ${(isOffline || isIdle) ? '!hidden' : ''}`}
                                                         >
                                                             <Camera className="w-8 h-8" />
                                                         </div>
@@ -233,8 +244,8 @@ export default function ScreenshotsPage() {
                                                                 Sesión #{session.session_id}
                                                             </p>
                                                         </div>
-                                                        <Badge variant="secondary" className={`text-[9px] px-1 py-0 h-4 ${isOffline ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                                                            {isOffline ? 'Desc' : 'Activa'}
+                                                        <Badge variant="secondary" className={`text-[9px] px-1 py-0 h-4 ${isOffline ? 'bg-red-500/10 text-red-500' : isIdle ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                                            {isOffline ? 'Desc' : isIdle ? 'Inactiva' : 'Activa'}
                                                         </Badge>
                                                     </div>
                                                 </CardContent>
