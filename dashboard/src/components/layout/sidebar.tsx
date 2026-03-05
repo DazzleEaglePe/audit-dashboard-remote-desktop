@@ -19,10 +19,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
-import Swal from 'sweetalert2'
-import withReactContent from 'sweetalert2-react-content'
-
-const MySwal = withReactContent(Swal)
 
 const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -77,28 +73,41 @@ export function Sidebar() {
     };
 
     async function handleLogout() {
-        MySwal.fire({
-            title: '¿Cerrar sesión?',
-            text: "Tendrás que volver a ingresar tus credenciales.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: 'hsl(var(--primary))',
-            cancelButtonColor: 'hsl(var(--muted))',
-            confirmButtonText: 'Sí, salir',
-            cancelButtonText: 'Cancelar',
-            background: 'hsl(var(--card))',
-            color: 'hsl(var(--foreground))',
-            customClass: {
-                confirmButton: 'text-primary-foreground',
-                cancelButton: 'text-foreground border border-border bg-transparent',
-            }
-        }).then((result) => {
+        try {
+            const Swal = (await import('sweetalert2')).default;
+            const withReactContent = (await import('sweetalert2-react-content')).default;
+            const MySwal = withReactContent(Swal);
+
+            const result = await MySwal.fire({
+                title: '¿Cerrar sesión?',
+                text: "Tendrás que volver a ingresar tus credenciales.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: 'hsl(var(--primary))',
+                cancelButtonColor: 'hsl(var(--muted))',
+                confirmButtonText: 'Sí, salir',
+                cancelButtonText: 'Cancelar',
+                background: 'hsl(var(--card))',
+                color: 'hsl(var(--foreground))',
+                customClass: {
+                    confirmButton: 'text-primary-foreground',
+                    cancelButton: 'text-foreground border border-border bg-transparent',
+                }
+            });
+
             if (result.isConfirmed) {
                 document.cookie = "auth-token=; path=/; max-age=0";
                 router.push("/login");
                 router.refresh();
             }
-        })
+        } catch (error) {
+            // Fallback in case chunk fails to load
+            if (window.confirm('¿Desea cerrar sesión? Tendrás que volver a ingresar tus credenciales.')) {
+                document.cookie = "auth-token=; path=/; max-age=0";
+                router.push("/login");
+                router.refresh();
+            }
+        }
     }
 
     const NavContent = () => (
