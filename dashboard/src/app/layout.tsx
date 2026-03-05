@@ -11,9 +11,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ECA Auditoría - Dashboard de Monitoreo RDP",
+  title: "ECA Soluciones Empresariales SAC - Panel de Auditoría",
   description:
-    "Sistema de auditoría y monitoreo en tiempo real de escritorios remotos — ECA Estudio Contable Alvarez",
+    "Sistema de auditoría y monitoreo en tiempo real de escritorios remotos — ECA Soluciones Empresariales SAC",
 };
 
 export default function RootLayout({
@@ -23,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning>
         <LanguageProvider>
           <ThemeProvider
             attribute="class"
