@@ -124,13 +124,16 @@ export function upsertSessions(serverId: string, sessions: Partial<Session>[]): 
     DO UPDATE SET state = @state, idle_time = @idle_time, source_ip = @source_ip, updated_at = datetime('now')
   `);
 
-  // Remove stale sessions for this server that aren't in the new data
-  const currentSessionIds = sessions.map((s) => s.session_id);
-  if (currentSessionIds.length > 0) {
-    const placeholders = currentSessionIds.map(() => '?').join(',');
-    db.prepare(
-      `DELETE FROM sessions WHERE server_id = ? AND session_id NOT IN (${placeholders})`
-    ).run(serverId, ...currentSessionIds);
+  // Remove stale sessions: build composite keys (session_id, username) to avoid
+  // false retention when Windows reuses session IDs for different users
+  if (sessions.length > 0) {
+    const compositeKeys = sessions.map((s) => `${s.session_id}|${s.username}`);
+    const allCurrent = db.prepare('SELECT session_id, username FROM sessions WHERE server_id = ?').all(serverId) as { session_id: number; username: string }[];
+    const toDelete = allCurrent.filter((r) => !compositeKeys.includes(`${r.session_id}|${r.username}`));
+    const deleteStmt = db.prepare('DELETE FROM sessions WHERE server_id = ? AND session_id = ? AND username = ?');
+    for (const row of toDelete) {
+      deleteStmt.run(serverId, row.session_id, row.username);
+    }
   } else {
     // No active sessions → remove all for this server
     db.prepare('DELETE FROM sessions WHERE server_id = ?').run(serverId);
