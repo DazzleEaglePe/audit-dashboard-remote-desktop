@@ -148,7 +148,7 @@ export default function SessionsPage() {
                                             <TableCell className="font-mono text-sm">{session.session_id}</TableCell>
                                             <TableCell className="flex items-center gap-1 text-sm text-foreground/80 font-mono">
                                                 <Clock className="w-3 h-3 text-muted-foreground" />
-                                                {session.idle_time === "0" ? `00:00 ${t("sessions.idleActive")}` : session.idle_time ? `${session.idle_time}` : "—"}
+                                                {["0", ".", "none", "ninguno"].includes(session.idle_time?.trim().toLowerCase() || "") ? `00:00 ${t("sessions.idleActive")}` : session.idle_time ? `${session.idle_time}` : "—"}
                                             </TableCell>
                                             <TableCell className="font-mono text-xs">
                                                 <div className="flex items-center gap-1">

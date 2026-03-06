@@ -182,7 +182,7 @@ export default function ScreenshotsPage() {
                                     {serverSessions.map((session) => {
                                         const imgUrl = getScreenshotUrl(serverId, session.username, session.session_id);
                                         const isOffline = session.state !== "Active";
-                                        const isIdle = !isOffline && session.idle_time && session.idle_time !== "0" && session.idle_time !== ".";
+                                        const isIdle = !isOffline && session.idle_time && !["0", ".", "none", "ninguno"].includes(session.idle_time.trim().toLowerCase());
 
                                         return (
                                             <Card
