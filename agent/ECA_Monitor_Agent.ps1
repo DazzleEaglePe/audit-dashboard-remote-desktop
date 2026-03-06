@@ -211,31 +211,20 @@ while ($true) {
                     $sessionId = "0"
                 }
                 
-                # Upload using native .NET HttpClient to completely avoid console flashing
-                Add-Type -AssemblyName System.Net.Http -ErrorAction SilentlyContinue
+                # Upload using curl.exe via .NET Process to completely avoid console flashing
+                $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+                $pinfo.FileName = "curl.exe"
+                $pinfo.Arguments = "-s -F `"server_id=$serverId`" -F `"username=$username`" -F `"session_id=$sessionId`" -F `"image=@$($file.FullName)`" -H `"x-api-key: $apiKey`" `"$apiUrl/agent/screenshot`""
+                $pinfo.UseShellExecute = $false
+                $pinfo.CreateNoWindow = $true
+                $p = [System.Diagnostics.Process]::Start($pinfo)
+                $p.WaitForExit()
                 
-                $client = New-Object System.Net.Http.HttpClient
-                $client.DefaultRequestHeaders.Add("x-api-key", $apiKey)
-                
-                $content = New-Object System.Net.Http.MultipartFormDataContent
-                $content.Add((New-Object System.Net.Http.StringContent($serverId)), "server_id")
-                $content.Add((New-Object System.Net.Http.StringContent($username)), "username")
-                $content.Add((New-Object System.Net.Http.StringContent($sessionId)), "session_id")
-                
-                $fileBytes = [System.IO.File]::ReadAllBytes($file.FullName)
-                $byteArrayContent = New-Object System.Net.Http.ByteArrayContent($fileBytes, 0, $fileBytes.Length)
-                $byteArrayContent.Headers.ContentType = New-Object System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg")
-                $content.Add($byteArrayContent, "image", $file.Name)
-                
-                $uri = New-Object System.Uri("$apiUrl/agent/screenshot")
-                $task = $client.PostAsync($uri, $content)
-                $task.Wait()
-                $response = $task.Result
-                
-                $content.Dispose()
-                $client.Dispose()
-
-                Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Screenshot uploaded for $username (session $sessionId) - HTTP $($response.StatusCode)"
+                if ($p.ExitCode -eq 0) {
+                    Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Screenshot uploaded for $username (session $sessionId) - curl exit: $($p.ExitCode)"
+                } else {
+                    Write-Warning "[$(Get-Date -Format 'HH:mm:ss')] Screenshot upload failed for $username (session $sessionId) - curl exit: $($p.ExitCode)"
+                }
             }
             catch {
                 Write-Warning "[$(Get-Date -Format 'HH:mm:ss')] Failed to upload screenshot $($file.Name): $_"
