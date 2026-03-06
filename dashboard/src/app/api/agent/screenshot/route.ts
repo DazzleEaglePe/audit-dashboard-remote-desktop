@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
 
     const serverId = formData.get('server_id') as string;
-    const username = formData.get('username') as string;
+    const username = (formData.get('username') as string).toLowerCase();
     const sessionId = formData.get('session_id') as string;
     const resolution = (formData.get('resolution') as string) || 'thumbnail';
     const image = formData.get('image') as File | null;

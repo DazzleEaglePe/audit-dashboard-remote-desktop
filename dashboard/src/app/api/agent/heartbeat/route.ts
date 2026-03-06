@@ -32,14 +32,20 @@ export async function POST(request: NextRequest) {
       return errorResponse('Missing required fields: server_id, metrics', 400);
     }
 
+    // Normalize usernames (Windows is case-insensitive, Linux is not. quser vs $env:USERNAME mismatch fix)
+    const normalizedSessions = (body.sessions || []).map(s => ({
+      ...s,
+      username: s.username ? s.username.toLowerCase() : s.username
+    }));
+
     // Update sessions
-    upsertSessions(body.server_id, body.sessions || []);
+    upsertSessions(body.server_id, normalizedSessions);
 
     // Store metrics
     insertServerMetrics(
       body.server_id,
       body.metrics,
-      (body.sessions || []).filter((s) => s.state === 'Active').length
+      normalizedSessions.filter((s) => s.state === 'Active').length
     );
 
     // Check for alerts: high CPU
@@ -70,14 +76,14 @@ export async function POST(request: NextRequest) {
         server_id: body.server_id,
         timestamp: new Date().toISOString(),
         metrics: body.metrics,
-        sessions: body.sessions,
+        sessions: normalizedSessions,
       };
     }
 
     return successResponse({
       status: 'ok',
       server_id: body.server_id,
-      sessions_updated: (body.sessions || []).length,
+      sessions_updated: normalizedSessions.length,
     });
   } catch (error) {
     console.error('Heartbeat error:', error);
