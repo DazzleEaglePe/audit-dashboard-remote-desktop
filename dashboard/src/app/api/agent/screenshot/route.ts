@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
     fs.writeFileSync(filepath, buffer);
 
-    const imageUrl = `/screenshots/${serverId}/${filename}?t=${Date.now()}`;
+    const imageUrl = `/api/screenshots/${serverId}/${filename}?t=${Date.now()}`;
 
     // Convert to base64 to send directly via WebSocket
     const base64Image = `data:image/jpeg;base64,${buffer.toString('base64')}`;
