@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import type { Alert } from "@/types";
 import { useLanguage } from "@/components/language-provider";
+import { parseUtcDate } from "@/lib/utils";
 
 const ALERT_CONFIG: Record<string, { icon: React.ElementType; color: string }> = {
     server_down: {
@@ -192,7 +193,7 @@ export default function AlertsPage() {
                                             </div>
                                             <p className="text-sm text-muted-foreground">{alert.message}</p>
                                             <p className="text-xs text-muted-foreground/60 mt-1">
-                                                {new Date(alert.created_at).toLocaleString("es-PE")}
+                                                {parseUtcDate(alert.created_at)?.toLocaleString("es-PE")}
                                             </p>
                                         </div>
                                         {isUnread && (

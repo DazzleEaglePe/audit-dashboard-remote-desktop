@@ -23,6 +23,7 @@ import {
 import { ScrollText, Search, ChevronLeft, ChevronRight, LogIn, LogOut, Clock, Zap } from "lucide-react";
 import type { SessionLog } from "@/types";
 import { useLanguage } from "@/components/language-provider";
+import { parseUtcDate } from "@/lib/utils";
 
 const EVENT_CONFIG: Record<string, { icon: React.ElementType; color: string }> = {
     connect: { icon: LogIn, color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
@@ -169,7 +170,7 @@ export default function LogsPage() {
                                             return (
                                                 <TableRow key={log.id} className="hover:bg-accent/50 transition-colors">
                                                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                                                        {new Date(log.timestamp).toLocaleString("es-PE", {
+                                                        {parseUtcDate(log.timestamp)?.toLocaleString("es-PE", {
                                                             day: "2-digit",
                                                             month: "2-digit",
                                                             year: "numeric",

@@ -21,6 +21,7 @@ import {
 import { Monitor, Clock, Wifi, User } from "lucide-react";
 import type { Session } from "@/types";
 import { useLanguage } from "@/components/language-provider";
+import { parseUtcDate } from "@/lib/utils";
 
 const SERVER_NAMES: Record<string, string> = {
     srv1: "DESKTOP-E4F6THB",
@@ -158,7 +159,7 @@ export default function SessionsPage() {
                                             </TableCell>
                                             <TableCell className="text-sm font-medium">
                                                 {session.logon_time
-                                                    ? new Date(session.logon_time).toLocaleString("es-PE", {
+                                                    ? parseUtcDate(session.logon_time)?.toLocaleString("es-PE", {
                                                         day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit"
                                                     })
                                                     : "—"}
