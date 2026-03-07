@@ -35,7 +35,6 @@ export default function ScreenshotsPage() {
     const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotItem | null>(null);
     const [refreshKey, setRefreshKey] = useState(Date.now());
     const [imageTimestamps, setImageTimestamps] = useState<Record<string, number>>({});
-    const [base64Images, setBase64Images] = useState<Record<string, string>>({});
     const [statusFilter, setStatusFilter] = useState<string>("active");
 
     async function fetchSessions() {
@@ -67,8 +66,17 @@ export default function ScreenshotsPage() {
             const key = `${data.serverId}-${data.username}-${data.sessionId}`;
 
             if (data.image) {
-                // If the backend sent the full Base64 image, use it directly (0 HTTP latency)
-                setBase64Images((prev) => ({ ...prev, [key]: data.image as string }));
+                // DIRECT DOM UPDATE — bypasses React re-renders for smooth, video-like streaming
+                const imgEl = document.querySelector(`[data-stream-key="${key}"]`) as HTMLImageElement;
+                if (imgEl) {
+                    imgEl.src = data.image;
+                    imgEl.style.display = "block";
+                }
+                // Also update the fullscreen dialog if it's open for this session
+                const fullEl = document.querySelector(`[data-stream-full="${key}"]`) as HTMLImageElement;
+                if (fullEl) {
+                    fullEl.src = data.image;
+                }
             } else {
                 // Fallback: Just update timestamp to force HTTP reload
                 setImageTimestamps((prev) => ({ ...prev, [key]: Date.now() }));
@@ -104,14 +112,8 @@ export default function ScreenshotsPage() {
     }, {});
 
     function getScreenshotUrl(serverId: string, username: string, sessionId: number) {
+        // HTTP fallback URL — only used if no WebSocket stream is active
         const key = `${serverId}-${username}-${sessionId}`;
-
-        // Priority 1: Instant Base64 image from WebSocket
-        if (base64Images[key]) {
-            return base64Images[key];
-        }
-
-        // Priority 2: Use the real-time websocket timestamp if available, otherwise the 10s fallback polling key
         const ts = imageTimestamps[key] || refreshKey;
         return `/api/screenshots/${serverId}/${username}_${sessionId}_thumb.jpg?t=${ts}`;
     }
@@ -206,9 +208,10 @@ export default function ScreenshotsPage() {
                                                     <div className="relative aspect-video bg-accent rounded-md overflow-hidden">
                                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                                         <img
+                                                            data-stream-key={`${serverId}-${session.username}-${session.session_id}`}
                                                             src={imgUrl}
                                                             alt={`Pantalla de ${session.username}`}
-                                                            className={`w-full h-full object-cover transition-all ${isServerOffline ? "grayscale brightness-50" : isOffline ? "brightness-[0.35]" : ""}`}
+                                                            className={`w-full h-full object-cover ${isServerOffline ? "grayscale brightness-50" : isOffline ? "brightness-[0.35]" : ""}`}
                                                             onError={(e) => {
                                                                 const target = e.target as HTMLImageElement;
                                                                 target.style.display = "none";
@@ -305,6 +308,7 @@ export default function ScreenshotsPage() {
                         <div className="aspect-video bg-accent rounded-lg overflow-hidden">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
+                                data-stream-full={`${selectedScreenshot.server_id}-${selectedScreenshot.username}-${selectedScreenshot.session_id}`}
                                 src={selectedScreenshot.image_url || ""}
                                 alt={`Pantalla de ${selectedScreenshot.username}`}
                                 className="w-full h-full object-contain"
