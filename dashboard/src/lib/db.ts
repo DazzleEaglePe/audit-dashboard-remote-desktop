@@ -133,17 +133,48 @@ export function upsertSessions(serverId: string, sessions: Partial<Session>[]): 
 
   // Remove stale sessions: build composite keys (session_id, username) to avoid
   // false retention when Windows reuses session IDs for different users
+  const allCurrent = db.prepare('SELECT session_id, username FROM sessions WHERE server_id = ?').all(serverId) as { session_id: number; username: string }[];
+  const currentKeys = allCurrent.map((r) => `${r.session_id}|${r.username}`);
+  
   if (sessions.length > 0) {
-    const compositeKeys = sessions.map((s) => `${s.session_id}|${s.username}`);
-    const allCurrent = db.prepare('SELECT session_id, username FROM sessions WHERE server_id = ?').all(serverId) as { session_id: number; username: string }[];
-    const toDelete = allCurrent.filter((r) => !compositeKeys.includes(`${r.session_id}|${r.username}`));
+    const incomingKeys = sessions.map((s) => `${s.session_id}|${s.username}`);
+    const toDelete = allCurrent.filter((r) => !incomingKeys.includes(`${r.session_id}|${r.username}`));
+    
+    // Find new sessions for audit logs
+    const newSessions = sessions.filter((s) => !currentKeys.includes(`${s.session_id}|${s.username}`));
+
     const deleteStmt = db.prepare('DELETE FROM sessions WHERE server_id = ? AND session_id = ? AND username = ?');
-    for (const row of toDelete) {
-      deleteStmt.run(serverId, row.session_id, row.username);
-    }
+    const logStmt = db.prepare(`
+      INSERT INTO session_logs (server_id, username, event_type, session_id, source_ip, timestamp, details)
+      VALUES (?, ?, ?, ?, ?, datetime('now'), ?)
+    `);
+
+    db.transaction(() => {
+      // 1. Log disconnects
+      for (const row of toDelete) {
+        logStmt.run(serverId, row.username, 'disconnect', row.session_id, null, 'Desconexión automática inferida por Heartbeat');
+        deleteStmt.run(serverId, row.session_id, row.username);
+      }
+      
+      // 2. Log connects
+      for (const s of newSessions) {
+        logStmt.run(serverId, s.username, 'connect', s.session_id, s.source_ip || null, 'Conexión automática inferida por Heartbeat');
+      }
+    })();
   } else {
-    // No active sessions → remove all for this server
-    db.prepare('DELETE FROM sessions WHERE server_id = ?').run(serverId);
+    // No active sessions → remove all for this server and log disconnects
+    const deleteStmt = db.prepare('DELETE FROM sessions WHERE server_id = ?');
+    const logStmt = db.prepare(`
+      INSERT INTO session_logs (server_id, username, event_type, session_id, source_ip, timestamp, details)
+      VALUES (?, ?, ?, ?, ?, datetime('now'), ?)
+    `);
+
+    db.transaction(() => {
+      for (const row of allCurrent) {
+        logStmt.run(serverId, row.username, 'disconnect', row.session_id, null, 'Desconexión masiva (Servidor vacío)');
+      }
+      deleteStmt.run(serverId);
+    })();
   }
 
   // Upsert active ones
