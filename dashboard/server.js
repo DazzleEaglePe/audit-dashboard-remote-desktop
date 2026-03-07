@@ -47,6 +47,7 @@ app.prepare().then(() => {
         socket.on("agent:screenshot", (data) => {
             // C# agent sends: { server_id, username, session_id, image_url, timestamp }
             if (data && data.server_id && data.image_url) {
+                console.log(`[FRAME] ${data.server_id} user=${data.username} session=${data.session_id} size=${data.image_url?.length || 0}`);
                 // Broadcast to all dashboard clients viewing this server
                 io.to(`server:${data.server_id}`).emit("screenshot:new", {
                     serverId: data.server_id,
