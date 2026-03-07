@@ -221,8 +221,8 @@ export default function ScreenshotsPage() {
                                                             </div>
                                                         )}
                                                         {isIdle && (
-                                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/50 backdrop-blur-[2px] z-10 pointer-events-none">
-                                                                <Badge variant="outline" className="text-amber-500 bg-background/80 border-amber-500/30">
+                                                            <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
+                                                                <Badge variant="outline" className="text-amber-500 bg-background/80 border-amber-500/30 text-[9px] px-1.5 py-0.5 backdrop-blur-sm">
                                                                     Inactiva ({session.idle_time})
                                                                 </Badge>
                                                             </div>
