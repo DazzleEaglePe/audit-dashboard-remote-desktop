@@ -327,7 +327,7 @@ export default function ScreenshotsPage() {
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 data-stream-full={`${selectedScreenshot.server_id}-${selectedScreenshot.username}-${selectedScreenshot.session_id}`}
-                                src={selectedScreenshot.image_url || ""}
+                                src={getScreenshotUrl(selectedScreenshot.server_id, selectedScreenshot.username, selectedScreenshot.session_id)}
                                 alt={`Pantalla de ${selectedScreenshot.username}`}
                                 className="w-full h-full object-contain"
                                 onError={(e) => {
