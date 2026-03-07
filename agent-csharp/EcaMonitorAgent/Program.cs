@@ -1,26 +1,25 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Text.Json;
+using System.Windows.Forms;
 using EcaMonitorAgent.Application.Services;
 using EcaMonitorAgent.Domain.Interfaces;
 using EcaMonitorAgent.Domain.Models;
 using EcaMonitorAgent.Infrastructure.Providers;
 
+// Required for NotifyIcon message pump
+System.Windows.Forms.Application.EnableVisualStyles();
+System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
+
 var builder = Host.CreateDefaultBuilder(args);
 
 builder.ConfigureServices((hostContext, services) =>
 {
-    // Configure Logging
+    // Configure Logging (no console output since we're a tray app)
     services.AddLogging(configure =>
     {
-        configure.AddSimpleConsole(options => 
-        {
-            options.IncludeScopes = false;
-            options.SingleLine = true;
-            options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
-        });
         configure.SetMinimumLevel(LogLevel.Debug);
     });
 
@@ -28,7 +27,7 @@ builder.ConfigureServices((hostContext, services) =>
     var configPath = @"C:\ECA_Monitor\config.json";
     if (!File.Exists(configPath))
     {
-        Console.WriteLine($"[ERROR] Configuration file not found at: {configPath}");
+        MessageBox.Show($"Config not found: {configPath}", "ECA Monitor", MessageBoxButtons.OK, MessageBoxIcon.Error);
         return;
     }
 
@@ -60,9 +59,31 @@ builder.ConfigureServices((hostContext, services) =>
 
 using var host = builder.Build();
 
-Console.WriteLine("=============================================");
-Console.WriteLine(" ECA Monitor C# Agent - Real-time Streaming  ");
-Console.WriteLine("=============================================");
-Console.WriteLine("Press Ctrl+C to exit...\n");
+// --- System Tray Icon ---
+var trayMenu = new ContextMenuStrip();
+trayMenu.Items.Add("ECA Monitor (Activo)", null, null!).Enabled = false;
+trayMenu.Items.Add(new ToolStripSeparator());
+trayMenu.Items.Add("Salir", null, (_, _) =>
+{
+    host.StopAsync().Wait(TimeSpan.FromSeconds(3));
+    System.Windows.Forms.Application.Exit();
+});
 
-await host.RunAsync();
+var trayIcon = new NotifyIcon
+{
+    Text = "ECA Monitor Agent - Streaming",
+    Icon = SystemIcons.Shield,
+    ContextMenuStrip = trayMenu,
+    Visible = true
+};
+
+// Start the host (heartbeat + streaming) in a background thread
+var hostTask = Task.Run(() => host.RunAsync());
+
+// Run WinForms message pump on main thread (keeps tray icon alive)
+System.Windows.Forms.Application.Run();
+
+// Cleanup
+trayIcon.Visible = false;
+trayIcon.Dispose();
+

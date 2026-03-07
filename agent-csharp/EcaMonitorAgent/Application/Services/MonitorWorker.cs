@@ -68,6 +68,9 @@ public class MonitorWorker : BackgroundService
 
     private async Task RunStreamingLoopAsync(CancellationToken token)
     {
+        // Only stream the session this process is running in (GDI+ can only capture THIS desktop)
+        var mySessionId = System.Diagnostics.Process.GetCurrentProcess().SessionId;
+
         while (!token.IsCancellationRequested)
         {
             try
@@ -76,7 +79,7 @@ public class MonitorWorker : BackgroundService
                 
                 foreach (var session in sessions)
                 {
-                    if (session.State != "Active")
+                    if (session.State != "Active" || session.SessionId != mySessionId)
                         continue;
 
                     var frame = _captureEngine.CaptureSessionAsBase64(
