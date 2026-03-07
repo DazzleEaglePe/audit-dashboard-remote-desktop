@@ -203,7 +203,7 @@ export default function ScreenshotsPage() {
                                                         <img
                                                             src={imgUrl}
                                                             alt={`Pantalla de ${session.username}`}
-                                                            className={`w-full h-full object-cover transition-all ${isOffline ? "grayscale brightness-50" : ""}`}
+                                                            className={`w-full h-full object-cover transition-all ${isOffline ? "brightness-[0.35]" : ""}`}
                                                             onError={(e) => {
                                                                 const target = e.target as HTMLImageElement;
                                                                 target.style.display = "none";
@@ -212,18 +212,28 @@ export default function ScreenshotsPage() {
                                                                 }
                                                             }}
                                                         />
+                                                        {/* Status badge — Teams style corner indicator */}
                                                         {isOffline && (
-                                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm z-10">
-                                                                <MonitorSmartphone className="w-8 h-8 text-muted-foreground mb-2" />
-                                                                <Badge variant="outline" className="text-muted-foreground bg-background/50 border-muted-foreground/30">
-                                                                    Fuera de línea
+                                                            <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
+                                                                <Badge variant="outline" className="text-red-400 bg-background/80 border-red-500/30 text-[9px] px-1.5 py-0.5 backdrop-blur-sm flex items-center gap-1">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
+                                                                    Desconectada
                                                                 </Badge>
                                                             </div>
                                                         )}
                                                         {isIdle && (
                                                             <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
-                                                                <Badge variant="outline" className="text-amber-500 bg-background/80 border-amber-500/30 text-[9px] px-1.5 py-0.5 backdrop-blur-sm">
+                                                                <Badge variant="outline" className="text-amber-500 bg-background/80 border-amber-500/30 text-[9px] px-1.5 py-0.5 backdrop-blur-sm flex items-center gap-1">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>
                                                                     Inactiva ({session.idle_time})
+                                                                </Badge>
+                                                            </div>
+                                                        )}
+                                                        {!isOffline && !isIdle && (
+                                                            <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
+                                                                <Badge variant="outline" className="text-emerald-500 bg-background/80 border-emerald-500/30 text-[9px] px-1.5 py-0.5 backdrop-blur-sm flex items-center gap-1">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
+                                                                    Activa
                                                                 </Badge>
                                                             </div>
                                                         )}
@@ -238,14 +248,18 @@ export default function ScreenshotsPage() {
                                                         </div>
                                                     </div>
                                                     <div className="mt-2 px-1 flex items-center justify-between">
-                                                        <div>
-                                                            <p className="text-xs font-medium font-mono truncate max-w-[100px]">{session.username}</p>
-                                                            <p className="text-[10px] text-muted-foreground">
-                                                                Sesión #{session.session_id}
-                                                            </p>
+                                                        <div className="flex items-center gap-1.5">
+                                                            {/* Teams-style status dot next to username */}
+                                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isOffline ? 'bg-red-500' : isIdle ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></span>
+                                                            <div>
+                                                                <p className="text-xs font-medium font-mono truncate max-w-[90px]">{session.username}</p>
+                                                                <p className="text-[10px] text-muted-foreground">
+                                                                    Sesión #{session.session_id}
+                                                                </p>
+                                                            </div>
                                                         </div>
                                                         <Badge variant="secondary" className={`text-[9px] px-1 py-0 h-4 ${isOffline ? 'bg-red-500/10 text-red-500' : isIdle ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                                                            {isOffline ? 'Desc' : isIdle ? 'Inactiva' : 'Activa'}
+                                                            {isOffline ? 'Desconectada' : isIdle ? 'Inactiva' : 'Activa'}
                                                         </Badge>
                                                     </div>
                                                 </CardContent>
@@ -256,7 +270,8 @@ export default function ScreenshotsPage() {
                             </div>
                         ))}
                 </div>
-            )}
+            )
+            }
 
             {/* Full-size Screenshot Dialog */}
             <Dialog
@@ -286,6 +301,6 @@ export default function ScreenshotsPage() {
                     )}
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 }

@@ -201,37 +201,29 @@ while ($true) {
         
         foreach ($file in $thumbFiles) {
             try {
-                # Parse username from filename: username_sessionId_thumb.jpg
+                # Parse username and session ID from filename: username_sessionId_thumb.jpg
                 $nameParts = $file.BaseName -replace '_thumb$', '' -split '_'
                 if ($nameParts.Length -ge 2) {
-                    $fileUsername = $nameParts[0..($nameParts.Length - 2)] -join '_'
+                    $username = $nameParts[0..($nameParts.Length - 2)] -join '_'
+                    $sessionId = $nameParts[-1]
                 } else {
-                    $fileUsername = $file.BaseName -replace '_thumb$', ''
-                }
-                
-                # Match to the REAL session ID from quser (not the one in the filename,
-                # which may be wrong when Session-Capture-Loop runs via schtasks)
-                $matchedSession = $sessions | Where-Object { $_.username -ieq $fileUsername } | Select-Object -First 1
-                if ($matchedSession) {
-                    $realSessionId = $matchedSession.session_id
-                } else {
-                    # Fallback: use the session ID from the filename
-                    $realSessionId = if ($nameParts.Length -ge 2) { $nameParts[-1] } else { "0" }
+                    $username = $file.BaseName -replace '_thumb$', ''
+                    $sessionId = "0"
                 }
                 
                 # Upload using curl.exe via .NET Process to completely avoid console flashing
                 $pinfo = New-Object System.Diagnostics.ProcessStartInfo
                 $pinfo.FileName = "curl.exe"
-                $pinfo.Arguments = "-s -F `"server_id=$serverId`" -F `"username=$fileUsername`" -F `"session_id=$realSessionId`" -F `"image=@$($file.FullName)`" -H `"x-api-key: $apiKey`" `"$apiUrl/agent/screenshot`""
+                $pinfo.Arguments = "-s -F `"server_id=$serverId`" -F `"username=$username`" -F `"session_id=$sessionId`" -F `"image=@$($file.FullName)`" -H `"x-api-key: $apiKey`" `"$apiUrl/agent/screenshot`""
                 $pinfo.UseShellExecute = $false
                 $pinfo.CreateNoWindow = $true
                 $p = [System.Diagnostics.Process]::Start($pinfo)
                 $p.WaitForExit()
                 
                 if ($p.ExitCode -eq 0) {
-                    Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Screenshot uploaded for $fileUsername (session $realSessionId) - curl exit: $($p.ExitCode)"
+                    Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Screenshot uploaded for $username (session $sessionId) - curl exit: $($p.ExitCode)"
                 } else {
-                    Write-Warning "[$(Get-Date -Format 'HH:mm:ss')] Screenshot upload failed for $fileUsername (session $realSessionId) - curl exit: $($p.ExitCode)"
+                    Write-Warning "[$(Get-Date -Format 'HH:mm:ss')] Screenshot upload failed for $username (session $sessionId) - curl exit: $($p.ExitCode)"
                 }
             }
             catch {
