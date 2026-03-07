@@ -43,16 +43,16 @@ app.prepare().then(() => {
             console.log(`Socket ${socket.id} joined room server:${serverId}`);
         });
 
-        // Agent sends screenshot frames here
-        socket.on("screenshot", (data) => {
-            // data should be { serverId: '...', imageStr: '...' }
-            if (data && data.serverId && data.imageStr) {
-                // Broadcast specifically to the room of clients viewing this server
-                io.to(`server:${data.serverId}`).emit("screenshot:new", {
-                    serverId: data.serverId,
+        // Agent sends screenshot frames here (C# agent emits "agent:screenshot")
+        socket.on("agent:screenshot", (data) => {
+            // C# agent sends: { server_id, username, session_id, image_url, timestamp }
+            if (data && data.server_id && data.image_url) {
+                // Broadcast to all dashboard clients viewing this server
+                io.to(`server:${data.server_id}`).emit("screenshot:new", {
+                    serverId: data.server_id,
                     username: data.username,
-                    sessionId: data.sessionId,
-                    image: data.imageStr
+                    sessionId: data.session_id,
+                    image: data.image_url
                 });
             }
         });

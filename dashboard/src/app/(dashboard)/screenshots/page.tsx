@@ -57,6 +57,10 @@ export default function ScreenshotsPage() {
 
         socketIo.on("connect", () => {
             console.log("Connected to WebSocket for real-time screenshots (Base64)");
+            // Join all server rooms to receive screenshot broadcasts
+            Object.keys(SERVER_LABELS).forEach((serverId) => {
+                socketIo.emit("join-server", serverId);
+            });
         });
 
         socketIo.on("screenshot:new", (data: { serverId: string; username: string; sessionId: number; image?: string }) => {
