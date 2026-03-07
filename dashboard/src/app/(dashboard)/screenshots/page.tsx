@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,7 @@ export default function ScreenshotsPage() {
     const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotItem | null>(null);
     const [refreshKey, setRefreshKey] = useState(Date.now());
     const [imageTimestamps, setImageTimestamps] = useState<Record<string, number>>({});
+    const base64Ref = useRef<Record<string, string>>({});
     const [statusFilter, setStatusFilter] = useState<string>("active");
 
     async function fetchSessions() {
@@ -66,7 +67,10 @@ export default function ScreenshotsPage() {
             const key = `${data.serverId}-${data.username}-${data.sessionId}`;
 
             if (data.image) {
-                // DIRECT DOM UPDATE — bypasses React re-renders for smooth, video-like streaming
+                // Store in ref so React re-renders preserve the latest frame
+                base64Ref.current[key] = data.image;
+
+                // DIRECT DOM UPDATE for instant, flicker-free display
                 const imgEl = document.querySelector(`[data-stream-key="${key}"]`) as HTMLImageElement;
                 if (imgEl) {
                     imgEl.src = data.image;
@@ -112,8 +116,14 @@ export default function ScreenshotsPage() {
     }, {});
 
     function getScreenshotUrl(serverId: string, username: string, sessionId: number) {
-        // HTTP fallback URL — only used if no WebSocket stream is active
         const key = `${serverId}-${username}-${sessionId}`;
+
+        // Priority 1: Latest base64 frame from WebSocket (survives React re-renders via useRef)
+        if (base64Ref.current[key]) {
+            return base64Ref.current[key];
+        }
+
+        // Priority 2: HTTP fallback URL for sessions without WebSocket streaming
         const ts = imageTimestamps[key] || refreshKey;
         return `/api/screenshots/${serverId}/${username}_${sessionId}_thumb.jpg?t=${ts}`;
     }
