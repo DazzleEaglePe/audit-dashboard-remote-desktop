@@ -68,40 +68,31 @@ public class MonitorWorker : BackgroundService
 
     private async Task RunStreamingLoopAsync(CancellationToken token)
     {
-        // Get the session ID of the CURRENT PROCESS — guaranteed to match the correct RDP session
-        var mySessionId = System.Diagnostics.Process.GetCurrentProcess().SessionId;
-        var currentUser = Environment.UserName;
-        _logger.LogInformation("Streaming loop started. Process SessionId={SessionId}, User={User}", mySessionId, currentUser);
-
-        int frameCount = 0;
-
         while (!token.IsCancellationRequested)
         {
             try
             {
-                var frame = _captureEngine.CaptureSessionAsBase64(
-                    mySessionId,
-                    _config.ThumbnailWidth,
-                    _config.ThumbnailHeight,
-                    _config.ScreenshotQuality);
-
-                if (!string.IsNullOrEmpty(frame))
+                var sessions = _sessionProvider.GetActiveSessions();
+                
+                foreach (var session in sessions)
                 {
-                    await _eventDispatcher.StreamFrameAsync(
-                        _config.ServerId,
-                        currentUser,
-                        mySessionId,
-                        frame);
+                    if (session.State != "Active")
+                        continue;
 
-                    frameCount++;
-                    if (frameCount % 25 == 0) // Log every 5 seconds (25 frames at 5fps)
+                    var frame = _captureEngine.CaptureSessionAsBase64(
+                        session.SessionId, 
+                        _config.ThumbnailWidth, 
+                        _config.ThumbnailHeight,
+                        _config.ScreenshotQuality);
+
+                    if (!string.IsNullOrEmpty(frame))
                     {
-                        _logger.LogDebug("Streaming: {Count} frames sent so far.", frameCount);
+                        await _eventDispatcher.StreamFrameAsync(
+                            _config.ServerId, 
+                            session.Username, 
+                            session.SessionId, 
+                            frame);
                     }
-                }
-                else if (frameCount == 0)
-                {
-                    _logger.LogWarning("CaptureSessionAsBase64 returned null for SessionId={SessionId}.", mySessionId);
                 }
             }
             catch (Exception ex)

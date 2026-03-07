@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ export default function ScreenshotsPage() {
     const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotItem | null>(null);
     const [refreshKey, setRefreshKey] = useState(Date.now());
     const [imageTimestamps, setImageTimestamps] = useState<Record<string, number>>({});
-    const base64Ref = useRef<Record<string, string>>({});
+    const [base64Images, setBase64Images] = useState<Record<string, string>>({});
     const [statusFilter, setStatusFilter] = useState<string>("active");
 
     async function fetchSessions() {
@@ -67,20 +67,8 @@ export default function ScreenshotsPage() {
             const key = `${data.serverId}-${data.username}-${data.sessionId}`;
 
             if (data.image) {
-                // Store in ref so React re-renders preserve the latest frame
-                base64Ref.current[key] = data.image;
-
-                // DIRECT DOM UPDATE for instant, flicker-free display
-                const imgEl = document.querySelector(`[data-stream-key="${key}"]`) as HTMLImageElement;
-                if (imgEl) {
-                    imgEl.src = data.image;
-                    imgEl.style.display = "block";
-                }
-                // Also update the fullscreen dialog if it's open for this session
-                const fullEl = document.querySelector(`[data-stream-full="${key}"]`) as HTMLImageElement;
-                if (fullEl) {
-                    fullEl.src = data.image;
-                }
+                // Update state with the full Base64 image (0 HTTP latency)
+                setBase64Images((prev) => ({ ...prev, [key]: data.image as string }));
             } else {
                 // Fallback: Just update timestamp to force HTTP reload
                 setImageTimestamps((prev) => ({ ...prev, [key]: Date.now() }));
@@ -118,12 +106,12 @@ export default function ScreenshotsPage() {
     function getScreenshotUrl(serverId: string, username: string, sessionId: number) {
         const key = `${serverId}-${username}-${sessionId}`;
 
-        // Priority 1: Latest base64 frame from WebSocket (survives React re-renders via useRef)
-        if (base64Ref.current[key]) {
-            return base64Ref.current[key];
+        // Priority 1: Instant Base64 image from WebSocket
+        if (base64Images[key]) {
+            return base64Images[key];
         }
 
-        // Priority 2: HTTP fallback URL for sessions without WebSocket streaming
+        // Priority 2: HTTP fallback URL
         const ts = imageTimestamps[key] || refreshKey;
         return `/api/screenshots/${serverId}/${username}_${sessionId}_thumb.jpg?t=${ts}`;
     }
