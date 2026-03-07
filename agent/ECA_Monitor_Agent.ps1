@@ -173,7 +173,7 @@ while ($true) {
                 ram_total_mb = $mem.Total
                 disk_percent = $disk
             }
-            sessions = $sessions
+            sessions = @($sessions)  # Force array even for single session (PS ConvertTo-Json bug)
         }
 
         $jsonPayload = $payload | ConvertTo-Json -Depth 5 -Compress

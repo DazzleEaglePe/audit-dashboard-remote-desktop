@@ -32,8 +32,14 @@ export async function POST(request: NextRequest) {
       return errorResponse('Missing required fields: server_id, metrics', 400);
     }
 
-    // Normalize usernames (Windows is case-insensitive, Linux is not. quser vs $env:USERNAME mismatch fix)
-    const normalizedSessions = (body.sessions || []).map(s => ({
+    // PowerShell's ConvertTo-Json serializes single-element arrays as plain objects {},
+    // not arrays [{}]. We must normalize to always be an array before calling .map()
+    const rawSessions = body.sessions
+      ? (Array.isArray(body.sessions) ? body.sessions : [body.sessions])
+      : [];
+
+    // Normalize usernames (Windows is case-insensitive, Linux is not)
+    const normalizedSessions = rawSessions.map(s => ({
       ...s,
       username: s.username ? s.username.toLowerCase() : s.username
     }));
