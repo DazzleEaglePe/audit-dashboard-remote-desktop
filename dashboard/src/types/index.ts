@@ -26,6 +26,7 @@ export interface Session {
   source_ip: string | null;
   idle_time: string | null;
   updated_at: string;
+  server_status?: 'online' | 'offline'; // Added to pass server status to UI
 }
 
 export interface SessionLog {

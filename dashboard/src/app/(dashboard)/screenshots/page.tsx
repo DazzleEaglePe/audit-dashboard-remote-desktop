@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Camera, MonitorSmartphone, RefreshCw, Maximize2 } from "lucide-react";
+import { Camera, MonitorSmartphone, RefreshCw, Maximize2, WifiOff } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -181,13 +181,14 @@ export default function ScreenshotsPage() {
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                                     {serverSessions.map((session) => {
                                         const imgUrl = getScreenshotUrl(serverId, session.username, session.session_id);
+                                        const isServerOffline = session.server_status === "offline";
                                         const isOffline = session.state !== "Active";
                                         const isIdle = !isOffline && session.idle_time && !["0", ".", "none", "ninguno"].includes(session.idle_time.trim().toLowerCase());
 
                                         return (
                                             <Card
                                                 key={`${serverId}-${session.session_id}`}
-                                                className={`glass border-border/30 hover:border-primary/40 transition-all duration-200 cursor-pointer group ${isOffline ? "opacity-75" : ""}`}
+                                                className={`glass border-border/30 hover:border-primary/40 transition-all duration-200 cursor-pointer group ${(isOffline || isServerOffline) ? "opacity-75" : ""}`}
                                                 onClick={() =>
                                                     setSelectedScreenshot({
                                                         server_id: serverId,
@@ -203,54 +204,65 @@ export default function ScreenshotsPage() {
                                                         <img
                                                             src={imgUrl}
                                                             alt={`Pantalla de ${session.username}`}
-                                                            className={`w-full h-full object-cover transition-all ${isOffline ? "brightness-[0.35]" : ""}`}
+                                                            className={`w-full h-full object-cover transition-all ${isServerOffline ? "grayscale brightness-50" : isOffline ? "brightness-[0.35]" : ""}`}
                                                             onError={(e) => {
                                                                 const target = e.target as HTMLImageElement;
                                                                 target.style.display = "none";
-                                                                if (target.nextElementSibling && !isOffline) {
+                                                                if (target.nextElementSibling && !isServerOffline && !isOffline) {
                                                                     (target.nextElementSibling as HTMLElement).style.display = "flex";
                                                                 }
                                                             }}
                                                         />
                                                         {/* Status badge — Teams style corner indicator */}
-                                                        {isOffline && (
-                                                            <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
-                                                                <Badge variant="outline" className="text-red-400 bg-background/80 border-red-500/30 text-[9px] px-1.5 py-0.5 backdrop-blur-sm flex items-center gap-1">
-                                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
-                                                                    Desconectada
+                                                        {isServerOffline ? (
+                                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm z-10">
+                                                                <WifiOff className="w-8 h-8 text-muted-foreground mb-2" />
+                                                                <Badge variant="outline" className="text-muted-foreground bg-background/50 border-muted-foreground/30">
+                                                                    Servidor Offline
                                                                 </Badge>
                                                             </div>
-                                                        )}
-                                                        {isIdle && (
-                                                            <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
-                                                                <Badge variant="outline" className="text-amber-500 bg-background/80 border-amber-500/30 text-[9px] px-1.5 py-0.5 backdrop-blur-sm flex items-center gap-1">
-                                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>
-                                                                    Inactiva ({session.idle_time})
-                                                                </Badge>
-                                                            </div>
-                                                        )}
-                                                        {!isOffline && !isIdle && (
-                                                            <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
-                                                                <Badge variant="outline" className="text-emerald-500 bg-background/80 border-emerald-500/30 text-[9px] px-1.5 py-0.5 backdrop-blur-sm flex items-center gap-1">
-                                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
-                                                                    Activa
-                                                                </Badge>
-                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                {isOffline && (
+                                                                    <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
+                                                                        <Badge variant="outline" className="text-red-400 bg-background/80 border-red-500/30 text-[9px] px-1.5 py-0.5 backdrop-blur-sm flex items-center gap-1">
+                                                                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
+                                                                            Desconectada
+                                                                        </Badge>
+                                                                    </div>
+                                                                )}
+                                                                {isIdle && (
+                                                                    <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
+                                                                        <Badge variant="outline" className="text-amber-500 bg-background/80 border-amber-500/30 text-[9px] px-1.5 py-0.5 backdrop-blur-sm flex items-center gap-1">
+                                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>
+                                                                            Inactiva ({session.idle_time})
+                                                                        </Badge>
+                                                                    </div>
+                                                                )}
+                                                                {!isOffline && !isIdle && (
+                                                                    <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
+                                                                        <Badge variant="outline" className="text-emerald-500 bg-background/80 border-emerald-500/30 text-[9px] px-1.5 py-0.5 backdrop-blur-sm flex items-center gap-1">
+                                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
+                                                                            Activa
+                                                                        </Badge>
+                                                                    </div>
+                                                                )}
+                                                            </>
                                                         )}
                                                         <div
-                                                            className={`absolute inset-0 items-center justify-center text-muted-foreground/40 hidden ${(isOffline || isIdle) ? '!hidden' : ''}`}
+                                                            className={`absolute inset-0 items-center justify-center text-muted-foreground/40 hidden ${(isServerOffline || isOffline || isIdle) ? '!hidden' : ''}`}
                                                         >
                                                             <Camera className="w-8 h-8" />
                                                         </div>
                                                         {/* Hover overlay */}
-                                                        <div className={`absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100 ${isOffline ? 'z-20' : ''}`}>
+                                                        <div className={`absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100 ${(isOffline || isServerOffline) ? 'z-20' : ''}`}>
                                                             <Maximize2 className="w-5 h-5 text-white" />
                                                         </div>
                                                     </div>
                                                     <div className="mt-2 px-1 flex items-center justify-between">
                                                         <div className="flex items-center gap-1.5">
                                                             {/* Teams-style status dot next to username */}
-                                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isOffline ? 'bg-red-500' : isIdle ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></span>
+                                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isServerOffline ? 'bg-muted-foreground' : isOffline ? 'bg-red-500' : isIdle ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></span>
                                                             <div>
                                                                 <p className="text-xs font-medium font-mono truncate max-w-[90px]">{session.username}</p>
                                                                 <p className="text-[10px] text-muted-foreground">
@@ -258,8 +270,8 @@ export default function ScreenshotsPage() {
                                                                 </p>
                                                             </div>
                                                         </div>
-                                                        <Badge variant="secondary" className={`text-[9px] px-1 py-0 h-4 ${isOffline ? 'bg-red-500/10 text-red-500' : isIdle ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                                                            {isOffline ? 'Desconectada' : isIdle ? 'Inactiva' : 'Activa'}
+                                                        <Badge variant="secondary" className={`text-[9px] px-1 py-0 h-4 ${isServerOffline ? 'bg-muted/50 text-muted-foreground' : isOffline ? 'bg-red-500/10 text-red-500' : isIdle ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                                            {isServerOffline ? 'Offline' : isOffline ? 'Desconectada' : isIdle ? 'Inactiva' : 'Activa'}
                                                         </Badge>
                                                     </div>
                                                 </CardContent>

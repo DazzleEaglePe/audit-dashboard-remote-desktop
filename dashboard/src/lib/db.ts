@@ -110,7 +110,14 @@ export function getServerById(id: string): ServerWithMetrics | null {
 export function getAllActiveSessions(): Session[] {
   const db = getDb();
   return db
-    .prepare("SELECT * FROM sessions ORDER BY server_id, username")
+    .prepare(`
+      SELECT 
+        sessions.*, 
+        servers.status as server_status
+      FROM sessions
+      LEFT JOIN servers ON sessions.server_id = servers.id
+      ORDER BY sessions.server_id, sessions.username
+    `)
     .all() as Session[];
 }
 
