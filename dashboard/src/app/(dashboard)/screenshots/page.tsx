@@ -228,7 +228,7 @@ export default function ScreenshotsPage() {
                         </Card>
                     )}
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <div className="space-y-8">
                     {Object.entries(sessionsByServer)
                         .sort(([a], [b]) => a.localeCompare(b))
                         .map(([serverId, serverSessions]) => (
@@ -240,7 +240,8 @@ export default function ScreenshotsPage() {
                                         {serverSessions.length} sesiones
                                     </Badge>
                                 </h2>
-                                <div className={`grid grid-cols-2 lg:grid-cols-3 gap-3 ${pinnedScreenshot ? "xl:grid-cols-3" : "xl:grid-cols-4"}`}>
+                                {/* Using auto-fill for an organic, masonry-like responsive grid */}
+                                <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
                                     {serverSessions.map((session) => {
                                         const imgUrl = getScreenshotUrl(serverId, session.username, session.session_id);
                                         const isServerOffline = session.server_status === "offline";
@@ -250,7 +251,7 @@ export default function ScreenshotsPage() {
                                         return (
                                             <Card
                                                 key={`${serverId}-${session.session_id}`}
-                                                className={`glass border-border/30 hover:border-primary/40 transition-all duration-200 cursor-pointer group ${(isOffline || isServerOffline) ? "opacity-75" : ""}`}
+                                                className={`glass border-border/30 hover:border-primary/40 transition-all duration-200 cursor-pointer group flex flex-col ${(isOffline || isServerOffline) ? "opacity-75" : ""}`}
                                                 onClick={() =>
                                                     setSelectedScreenshot({
                                                         server_id: serverId,
@@ -260,8 +261,8 @@ export default function ScreenshotsPage() {
                                                     })
                                                 }
                                             >
-                                                <CardContent className="p-2">
-                                                    <div className="relative aspect-video bg-accent rounded-md overflow-hidden">
+                                                <CardContent className="p-3 flex-1 flex flex-col">
+                                                    <div className="relative aspect-video bg-accent rounded-md overflow-hidden shrink-0">
                                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                                         <img
                                                             data-stream-key={`${serverId}-${session.username}-${session.session_id}`}
@@ -307,25 +308,25 @@ export default function ScreenshotsPage() {
                                                         ) : (
                                                             <>
                                                                 {isOffline && (
-                                                                    <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
-                                                                        <Badge variant="outline" className="text-red-400 bg-background/80 border-red-500/30 text-[9px] px-1.5 py-0.5 backdrop-blur-sm flex items-center gap-1">
-                                                                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
+                                                                    <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                                                                        <Badge variant="outline" className="text-red-400 bg-background/80 border-red-500/30 text-[10px] px-2 py-0.5 backdrop-blur-sm flex items-center gap-1">
+                                                                            <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
                                                                             Desconectada
                                                                         </Badge>
                                                                     </div>
                                                                 )}
                                                                 {isIdle && (
-                                                                    <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
-                                                                        <Badge variant="outline" className="text-amber-500 bg-background/80 border-amber-500/30 text-[9px] px-1.5 py-0.5 backdrop-blur-sm flex items-center gap-1">
-                                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>
+                                                                    <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                                                                        <Badge variant="outline" className="text-amber-500 bg-background/80 border-amber-500/30 text-[10px] px-2 py-0.5 backdrop-blur-sm flex items-center gap-1">
+                                                                            <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
                                                                             Inactiva ({session.idle_time})
                                                                         </Badge>
                                                                     </div>
                                                                 )}
                                                                 {!isOffline && !isIdle && (
-                                                                    <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
-                                                                        <Badge variant="outline" className="text-emerald-500 bg-background/80 border-emerald-500/30 text-[9px] px-1.5 py-0.5 backdrop-blur-sm flex items-center gap-1">
-                                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
+                                                                    <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                                                                        <Badge variant="outline" className="text-emerald-500 bg-background/80 border-emerald-500/30 text-[10px] px-2 py-0.5 backdrop-blur-sm flex items-center gap-1">
+                                                                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
                                                                             Activa
                                                                         </Badge>
                                                                     </div>
@@ -335,42 +336,39 @@ export default function ScreenshotsPage() {
                                                         <div
                                                             className={`absolute inset-0 items-center justify-center text-muted-foreground/40 hidden ${(isServerOffline || isOffline || isIdle) ? '!hidden' : ''}`}
                                                         >
-                                                            <Camera className="w-8 h-8" />
+                                                            <Camera className="w-10 h-10" />
                                                         </div>
                                                         {/* Hover overlay */}
                                                         <div className={`absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100 ${(isOffline || isServerOffline) ? 'z-20' : ''}`}>
-                                                            <Maximize2 className="w-5 h-5 text-white" />
+                                                            <Maximize2 className="w-8 h-8 text-white drop-shadow-md" />
                                                         </div>
                                                     </div>
-                                                    <div className="mt-2 px-1 flex items-center justify-between">
-                                                        <div className="flex items-center gap-1.5 min-w-0">
+                                                    <div className="mt-3 px-1 flex items-center justify-between flex-1">
+                                                        <div className="flex items-center gap-2 min-w-0">
                                                             {/* Teams-style status dot next to username */}
-                                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isServerOffline ? 'bg-muted-foreground' : isOffline ? 'bg-red-500' : isIdle ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></span>
+                                                            <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isServerOffline ? 'bg-muted-foreground' : isOffline ? 'bg-red-500' : isIdle ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></span>
                                                             <div className="min-w-0">
-                                                                <p className="text-xs font-medium truncate" title={USER_DIRECTORY[session.username.toLowerCase()] || session.username}>
+                                                                <p className="text-sm font-medium truncate" title={USER_DIRECTORY[session.username.toLowerCase()] || session.username}>
                                                                     {USER_DIRECTORY[session.username.toLowerCase()] || session.username}
                                                                 </p>
-                                                                <p className="text-[10px] text-muted-foreground font-mono truncate">
+                                                                <p className="text-xs text-muted-foreground font-mono truncate">
                                                                     {session.username} — #{session.session_id}
                                                                 </p>
                                                             </div>
                                                         </div>
-                                                        <div className="flex gap-1 items-center shrink-0 pl-1">
+                                                        <div className="flex gap-1.5 items-center shrink-0 pl-2">
                                                             <Button 
                                                                 variant="ghost" 
                                                                 size="icon" 
                                                                 title="Fijar pantalla"
-                                                                className="h-5 w-5 hover:bg-primary/20 hover:text-primary z-30 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100" 
+                                                                className="h-7 w-7 hover:bg-primary/20 hover:text-primary z-30 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100" 
                                                                 onClick={(e) => { 
                                                                     e.stopPropagation(); 
                                                                     setPinnedScreenshot({ server_id: serverId, username: session.username, session_id: session.session_id, image_url: imgUrl });
                                                                     window.scrollTo({ top: 0, behavior: 'smooth' });
                                                                 }}>
-                                                                <Pin className="w-3 h-3" />
+                                                                <Pin className="w-4 h-4" />
                                                             </Button>
-                                                            <Badge variant="secondary" className={`text-[9px] px-1 py-0 h-4 ${isServerOffline ? 'bg-muted/50 text-muted-foreground' : isOffline ? 'bg-red-500/10 text-red-500' : isIdle ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                                                                {isServerOffline ? 'Offline' : isOffline ? 'Desc.' : isIdle ? 'Inactiva' : 'Activa'}
-                                                            </Badge>
                                                         </div>
                                                     </div>
                                                 </CardContent>
