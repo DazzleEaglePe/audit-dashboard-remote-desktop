@@ -209,8 +209,11 @@ export default function ScreenshotsPage() {
                                                             data-stream-key={`${serverId}-${session.username}-${session.session_id}`}
                                                             src={imgUrl}
                                                             alt={`Pantalla de ${session.username}`}
+                                                            style={base64Images[`${serverId}-${session.username}-${session.session_id}`] ? { display: "block" } : undefined}
                                                             className={`w-full h-full object-cover ${isServerOffline ? "grayscale brightness-50" : isOffline ? "brightness-[0.35]" : ""}`}
                                                             onError={(e) => {
+                                                                const key = `${serverId}-${session.username}-${session.session_id}`;
+                                                                if (base64Images[key]) return; // Don't hide if WebSocket stream is active
                                                                 const target = e.target as HTMLImageElement;
                                                                 target.style.display = "none";
                                                                 if (target.nextElementSibling && !isServerOffline && !isOffline) {
