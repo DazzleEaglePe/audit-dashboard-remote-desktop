@@ -43,6 +43,20 @@ app.prepare().then(() => {
             console.log(`Socket ${socket.id} joined room server:${serverId}`);
         });
 
+        // Agent sends screenshot frames here
+        socket.on("screenshot", (data) => {
+            // data should be { serverId: '...', imageStr: '...' }
+            if (data && data.serverId && data.imageStr) {
+                // Broadcast specifically to the room of clients viewing this server
+                io.to(`server:${data.serverId}`).emit("screenshot:new", {
+                    serverId: data.serverId,
+                    username: data.username,
+                    sessionId: data.sessionId,
+                    image: data.imageStr
+                });
+            }
+        });
+
         socket.on("leave-server", (serverId) => {
             socket.leave(`server:${serverId}`);
         });
