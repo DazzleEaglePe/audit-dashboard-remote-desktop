@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Camera, MonitorSmartphone, RefreshCw, Maximize2, WifiOff } from "lucide-react";
+import { Camera, MonitorSmartphone, RefreshCw, Maximize2, WifiOff, Pin, PinOff, Maximize } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -22,6 +22,22 @@ const SERVER_LABELS: Record<string, string> = {
     srv3: "Servidor 3",
 };
 
+const USER_DIRECTORY: Record<string, string> = {
+    cont: "Winner Huamantalla",
+    cont1: "Melany Roldan Berrocal",
+    sist: "Gianmarco Hugo Villalva Castillo",
+    sist1: "Ruly Segura Martinez",
+    sist3: "Miluska Alvarez Sandoval",
+    sist4: "Alexander Alania",
+    sist11: "Esther Enríquez Arango",
+    sist9: "Edith Cerrón Alvarez",
+    sist2: "María Melendez Contreras",
+    sist10: "Fernanda Rojas",
+    sist5: "Evelyn Acero Castillo",
+    sist6: "Adrian Antonio Zavaleta Ticona",
+    sist7: "Mallury Carrasco Segundo",
+};
+
 interface ScreenshotItem {
     server_id: string;
     username: string;
@@ -33,6 +49,7 @@ export default function ScreenshotsPage() {
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotItem | null>(null);
+    const [pinnedScreenshot, setPinnedScreenshot] = useState<ScreenshotItem | null>(null);
     const [refreshKey, setRefreshKey] = useState(Date.now());
     const [imageTimestamps, setImageTimestamps] = useState<Record<string, number>>({});
     const [base64Images, setBase64Images] = useState<Record<string, string>>({});
@@ -171,6 +188,47 @@ export default function ScreenshotsPage() {
                 </Card>
             ) : (
                 <div className="space-y-8">
+                    {/* Sección de Pantalla Fijada (Teams Style) */}
+                    {pinnedScreenshot && (
+                        <Card className="glass border-primary/50 border-2 mb-8 relative overflow-hidden shadow-lg shadow-primary/10">
+                            <CardHeader className="py-2 px-4 flex flex-row items-center justify-between border-b border-border/30 bg-primary/5">
+                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                    <Pin className="w-4 h-4 text-primary fill-primary" />
+                                    Pantalla Fijada: {USER_DIRECTORY[pinnedScreenshot.username.toLowerCase()] || pinnedScreenshot.username}
+                                    <Badge variant="secondary" className="text-[10px] uppercase ml-2">
+                                        {SERVER_LABELS[pinnedScreenshot.server_id] || pinnedScreenshot.server_id}
+                                    </Badge>
+                                </CardTitle>
+                                <Button variant="ghost" size="sm" onClick={() => setPinnedScreenshot(null)} className="h-8 hover:bg-red-500/10 hover:text-red-500">
+                                    <PinOff className="w-4 h-4 mr-2" />
+                                    Desfijar
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <div className="relative aspect-video xl:aspect-[21/9] bg-black group/pinned">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        data-stream-pinned={`${pinnedScreenshot.server_id}-${pinnedScreenshot.username}-${pinnedScreenshot.session_id}`}
+                                        src={getScreenshotUrl(pinnedScreenshot.server_id, pinnedScreenshot.username, pinnedScreenshot.session_id)}
+                                        alt={`Pantalla fijada de ${pinnedScreenshot.username}`}
+                                        className="w-full h-full object-contain"
+                                    />
+                                    <div className="absolute top-4 right-4 opacity-0 group-hover/pinned:opacity-100 transition-opacity">
+                                        <Button variant="secondary" size="icon" className="bg-background/80 hover:bg-background backdrop-blur-sm" onClick={(e) => {
+                                            const imgEl = e.currentTarget.parentElement?.previousElementSibling as HTMLElement;
+                                            if (imgEl && imgEl.requestFullscreen) {
+                                                imgEl.requestFullscreen();
+                                            }
+                                        }}>
+                                            <Maximize className="w-5 h-5" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     {Object.entries(sessionsByServer)
                         .sort(([a], [b]) => a.localeCompare(b))
                         .map(([serverId, serverSessions]) => (
@@ -182,7 +240,7 @@ export default function ScreenshotsPage() {
                                         {serverSessions.length} sesiones
                                     </Badge>
                                 </h2>
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                                <div className={`grid grid-cols-2 lg:grid-cols-3 gap-3 ${pinnedScreenshot ? "xl:grid-cols-3" : "xl:grid-cols-4"}`}>
                                     {serverSessions.map((session) => {
                                         const imgUrl = getScreenshotUrl(serverId, session.username, session.session_id);
                                         const isServerOffline = session.server_status === "offline";
@@ -285,19 +343,35 @@ export default function ScreenshotsPage() {
                                                         </div>
                                                     </div>
                                                     <div className="mt-2 px-1 flex items-center justify-between">
-                                                        <div className="flex items-center gap-1.5">
+                                                        <div className="flex items-center gap-1.5 min-w-0">
                                                             {/* Teams-style status dot next to username */}
                                                             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isServerOffline ? 'bg-muted-foreground' : isOffline ? 'bg-red-500' : isIdle ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></span>
-                                                            <div>
-                                                                <p className="text-xs font-medium font-mono truncate max-w-[90px]">{session.username}</p>
-                                                                <p className="text-[10px] text-muted-foreground">
-                                                                    Sesión #{session.session_id}
+                                                            <div className="min-w-0">
+                                                                <p className="text-xs font-medium truncate" title={USER_DIRECTORY[session.username.toLowerCase()] || session.username}>
+                                                                    {USER_DIRECTORY[session.username.toLowerCase()] || session.username}
+                                                                </p>
+                                                                <p className="text-[10px] text-muted-foreground font-mono truncate">
+                                                                    {session.username} — #{session.session_id}
                                                                 </p>
                                                             </div>
                                                         </div>
-                                                        <Badge variant="secondary" className={`text-[9px] px-1 py-0 h-4 ${isServerOffline ? 'bg-muted/50 text-muted-foreground' : isOffline ? 'bg-red-500/10 text-red-500' : isIdle ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                                                            {isServerOffline ? 'Offline' : isOffline ? 'Desconectada' : isIdle ? 'Inactiva' : 'Activa'}
-                                                        </Badge>
+                                                        <div className="flex gap-1 items-center shrink-0 pl-1">
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                title="Fijar pantalla"
+                                                                className="h-5 w-5 hover:bg-primary/20 hover:text-primary z-30 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100" 
+                                                                onClick={(e) => { 
+                                                                    e.stopPropagation(); 
+                                                                    setPinnedScreenshot({ server_id: serverId, username: session.username, session_id: session.session_id, image_url: imgUrl });
+                                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                                }}>
+                                                                <Pin className="w-3 h-3" />
+                                                            </Button>
+                                                            <Badge variant="secondary" className={`text-[9px] px-1 py-0 h-4 ${isServerOffline ? 'bg-muted/50 text-muted-foreground' : isOffline ? 'bg-red-500/10 text-red-500' : isIdle ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                                                {isServerOffline ? 'Offline' : isOffline ? 'Desc.' : isIdle ? 'Inactiva' : 'Activa'}
+                                                            </Badge>
+                                                        </div>
                                                     </div>
                                                 </CardContent>
                                             </Card>
@@ -306,6 +380,7 @@ export default function ScreenshotsPage() {
                                 </div>
                             </div>
                         ))}
+                    </div>
                 </div>
             )
             }
@@ -317,13 +392,15 @@ export default function ScreenshotsPage() {
             >
                 <DialogContent className="max-w-4xl glass">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <Camera className="w-4 h-4" />
-                            {selectedScreenshot?.username} — {SERVER_LABELS[selectedScreenshot?.server_id || ""] || selectedScreenshot?.server_id}
+                        <DialogTitle className="flex items-center justify-between pe-6">
+                            <span className="flex items-center gap-2">
+                                <Camera className="w-4 h-4" />
+                                {USER_DIRECTORY[selectedScreenshot?.username?.toLowerCase() || ""] || selectedScreenshot?.username} — {SERVER_LABELS[selectedScreenshot?.server_id || ""] || selectedScreenshot?.server_id}
+                            </span>
                         </DialogTitle>
                     </DialogHeader>
                     {selectedScreenshot && (
-                        <div className="aspect-video bg-accent rounded-lg overflow-hidden">
+                        <div className="relative aspect-video bg-accent rounded-lg overflow-hidden group/modal">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 data-stream-full={`${selectedScreenshot.server_id}-${selectedScreenshot.username}-${selectedScreenshot.session_id}`}
@@ -335,6 +412,16 @@ export default function ScreenshotsPage() {
                                     target.style.display = "none";
                                 }}
                             />
+                            <div className="absolute top-4 right-4 opacity-0 group-hover/modal:opacity-100 transition-opacity">
+                                <Button variant="secondary" size="icon" className="bg-background/80 hover:bg-background backdrop-blur-sm" onClick={(e) => {
+                                    const imgEl = e.currentTarget.parentElement?.previousElementSibling as HTMLElement;
+                                    if (imgEl && imgEl.requestFullscreen) {
+                                        imgEl.requestFullscreen();
+                                    }
+                                }}>
+                                    <Maximize className="w-5 h-5" />
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </DialogContent>
