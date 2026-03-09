@@ -51,7 +51,6 @@ export default function ScreenshotsPage() {
     const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotItem | null>(null);
     const [pinnedScreenshot, setPinnedScreenshot] = useState<ScreenshotItem | null>(null);
     const [refreshKey, setRefreshKey] = useState(Date.now());
-    const [imageTimestamps, setImageTimestamps] = useState<Record<string, number>>({});
     const [base64Images, setBase64Images] = useState<Record<string, string>>({});
     const [statusFilter, setStatusFilter] = useState<string>("active");
 
@@ -81,14 +80,12 @@ export default function ScreenshotsPage() {
         });
 
         socketIo.on("screenshot:new", (data: { serverId: string; username: string; sessionId: number; image?: string }) => {
-            const key = `${data.serverId}-${data.username}-${data.sessionId}`;
+            const normalizedUser = data.username ? data.username.toLowerCase() : "";
+            const key = `${data.serverId}-${normalizedUser}-${data.sessionId}`;
 
             if (data.image) {
                 // Update state with the full Base64 image (0 HTTP latency)
                 setBase64Images((prev) => ({ ...prev, [key]: data.image as string }));
-            } else {
-                // Fallback: Just update timestamp to force HTTP reload
-                setImageTimestamps((prev) => ({ ...prev, [key]: Date.now() }));
             }
         });
 
@@ -121,16 +118,14 @@ export default function ScreenshotsPage() {
     }, {});
 
     function getScreenshotUrl(serverId: string, username: string, sessionId: number) {
-        const key = `${serverId}-${username}-${sessionId}`;
-
-        // Priority 1: Instant Base64 image from WebSocket
-        if (base64Images[key]) {
-            return base64Images[key];
-        }
-
-        // Priority 2: HTTP fallback URL
-        const ts = imageTimestamps[key] || refreshKey;
-        return `/api/screenshots/${serverId}/${username}_${sessionId}_thumb.jpg?t=${ts}`;
+        const normalizedUser = username ? username.toLowerCase() : "";
+        const key = `${serverId}-${normalizedUser}-${sessionId}`;
+        
+        // Return Base64 directly. Ensure it has the data URI prefix for the browser to decode it.
+        const base64Data = base64Images[key];
+        if (!base64Data) return "";
+        
+        return base64Data.startsWith('data:image') ? base64Data : `data:image/jpeg;base64,${base64Data}`;
     }
 
     return (
@@ -208,7 +203,6 @@ export default function ScreenshotsPage() {
                                 <div className="relative aspect-video xl:aspect-[21/9] bg-black group/pinned">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
-                                        data-stream-pinned={`${pinnedScreenshot.server_id}-${pinnedScreenshot.username}-${pinnedScreenshot.session_id}`}
                                         src={getScreenshotUrl(pinnedScreenshot.server_id, pinnedScreenshot.username, pinnedScreenshot.session_id)}
                                         alt={`Pantalla fijada de ${pinnedScreenshot.username}`}
                                         className="w-full h-full object-contain"
@@ -265,21 +259,12 @@ export default function ScreenshotsPage() {
                                                     <div className="relative aspect-video bg-accent rounded-md overflow-hidden shrink-0">
                                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                                         <img
-                                                            data-stream-key={`${serverId}-${session.username}-${session.session_id}`}
                                                             src={imgUrl}
                                                             alt={`Pantalla de ${session.username}`}
-                                                            style={
-                                                                base64Images[`${serverId}-${session.username}-${session.session_id}`] 
-                                                                    ? { display: "block", position: "relative", zIndex: 5 } 
-                                                                    : undefined
-                                                            }
-                                                            className={`w-full h-full object-cover ${isServerOffline ? "grayscale brightness-50" : isOffline ? "brightness-[0.35]" : ""}`}
+                                                            style={{ visibility: imgUrl ? "visible" : "hidden" }}
+                                                            className={`w-full h-full object-cover relative z-10 ${isServerOffline ? "grayscale brightness-50" : isOffline ? "brightness-[0.35]" : ""}`}
                                                             onError={(e) => {
-                                                                const key = `${serverId}-${session.username}-${session.session_id}`;
-                                                                if (base64Images[key]) return; // Don't hide if WebSocket stream is active
-                                                                
                                                                 const target = e.target as HTMLImageElement;
-                                                                // Always let the image tag occupy space, just hide it safely when it errors out.
                                                                 target.style.visibility = "hidden";
                                                                 
                                                                 // Show placeholder underneath
@@ -401,7 +386,6 @@ export default function ScreenshotsPage() {
                         <div className="relative aspect-video bg-accent rounded-lg overflow-hidden group/modal">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                                data-stream-full={`${selectedScreenshot.server_id}-${selectedScreenshot.username}-${selectedScreenshot.session_id}`}
                                 src={getScreenshotUrl(selectedScreenshot.server_id, selectedScreenshot.username, selectedScreenshot.session_id)}
                                 alt={`Pantalla de ${selectedScreenshot.username}`}
                                 className="w-full h-full object-contain"
