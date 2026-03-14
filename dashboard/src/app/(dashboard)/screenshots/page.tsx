@@ -26,7 +26,7 @@ const USER_DIRECTORY: Record<string, string> = {
     cont: "Winner Huamantalla",
     cont1: "Melany Roldan Berrocal",
     sist: "Gianmarco Hugo Villalva Castillo",
-    sist1: "Ruly Segura Martinez",
+    sist1: "Luna Esmeralda Giron Subilete",
     sist3: "Miluska Alvarez Sandoval",
     sist4: "Alexander Alania",
     sist11: "Esther Enríquez Arango",
