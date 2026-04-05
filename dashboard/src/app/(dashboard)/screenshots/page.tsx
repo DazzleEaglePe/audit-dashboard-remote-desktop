@@ -23,19 +23,21 @@ const SERVER_LABELS: Record<string, string> = {
 };
 
 const USER_DIRECTORY: Record<string, string> = {
+    // Servidor 1
     cont: "Winner Huamantalla",
     cont1: "Melany Roldan Berrocal",
     sist: "Gianmarco Hugo Villalva Castillo",
     sist1: "Luna Esmeralda Giron Subilete",
-    sist3: "Miluska Alvarez Sandoval",
     sist4: "Alexander Alania",
-    sist11: "Esther Enríquez Arango",
-    sist9: "Edith Cerrón Alvarez",
+    // Servidor 2
     sist2: "María Melendez Contreras",
+    sist9: "Edith Cerrón Alvarez",
     sist10: "Fernanda Rojas",
-    sist5: "Evelyn Acero Castillo",
+    // Servidor 3
+    sist3: "Miluska Alvarez Sandoval",
     sist6: "Adrian Antonio Zavaleta Ticona",
     sist7: "Mallury Carrasco Segundo",
+    sist8: "Evelyn Acero Castillo",
 };
 
 interface ScreenshotItem {
