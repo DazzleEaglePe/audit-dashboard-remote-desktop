@@ -241,15 +241,17 @@ export default function DashboardPage() {
     const { t } = useLanguage();
     const [servers, setServers] = useState<ServerWithMetrics[]>([]);
     const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [profileName, setProfileName] = useState<string>("");
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
     const containerRef = useRef<HTMLDivElement>(null);
 
     async function fetchData() {
         try {
-            const [serversRes, statsRes] = await Promise.all([
+            const [serversRes, statsRes, profileRes] = await Promise.all([
                 fetch("/api/servers"),
                 fetch("/api/stats"),
+                fetch("/api/auth/profile"),
             ]);
 
             if (serversRes.ok) {
@@ -257,6 +259,10 @@ export default function DashboardPage() {
             }
             if (statsRes.ok) {
                 setStats(await statsRes.json());
+            }
+            if (profileRes.ok) {
+                const profileData = await profileRes.json();
+                setProfileName(profileData.fullName || "");
             }
         } catch (error) {
             console.error("Error fetching dashboard data:", error);
@@ -268,7 +274,22 @@ export default function DashboardPage() {
     useEffect(() => {
         fetchData();
         const interval = setInterval(fetchData, 15000); // Refresh every 15s
-        return () => clearInterval(interval);
+
+        const handleProfileUpdate = async () => {
+            try {
+                const res = await fetch("/api/auth/profile");
+                if (res.ok) {
+                    const profileData = await res.json();
+                    setProfileName(profileData.fullName || "");
+                }
+            } catch {}
+        };
+        window.addEventListener("profile-updated", handleProfileUpdate);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener("profile-updated", handleProfileUpdate);
+        };
     }, []);
 
     useEffect(() => {
@@ -320,7 +341,9 @@ export default function DashboardPage() {
             <div className="dashboard-header opacity-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2">
-                        {t("dashboard.welcome") || "¡Bienvenido de nuevo, Admin!"} <span className="animate-bounce">👋</span>
+                        {t("dashboard.welcome") 
+                            ? t("dashboard.welcome").replace("Admin", profileName || "Admin") 
+                            : `¡Bienvenido de nuevo, ${profileName || "Admin"}!`} <span className="animate-bounce">👋</span>
                     </h1>
                     <p className="text-muted-foreground text-sm mt-1 font-medium">
                         {t("dashboard.subtitle")}
