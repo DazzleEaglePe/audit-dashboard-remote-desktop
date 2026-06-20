@@ -32,6 +32,8 @@ export function Topbar() {
                 list.push({ label: t("sidebar.logs") || "Bitácora", href: "/logs" });
             } else if (seg === "alerts") {
                 list.push({ label: t("sidebar.alerts") || "Alertas", href: "/alerts" });
+            } else if (seg === "settings") {
+                list.push({ label: t("sidebar.settings") || "Configuración", href: "/settings" });
             }
         });
 
