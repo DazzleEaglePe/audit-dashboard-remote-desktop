@@ -28,7 +28,7 @@ export const notifyAlert = (alert: any) => {
 export const notifyNewScreenshot = (serverId: string, username: string, sessionId: number, base64Image: string) => {
   const io = getIO();
   if (io) {
-    io.emit("screenshot:new", { serverId, username, sessionId, image: base64Image });
+    io.to(`server:${serverId}`).emit("screenshot:new", { serverId, username, sessionId, image: base64Image });
   }
 };
 

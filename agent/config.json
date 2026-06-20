@@ -1,7 +1,0 @@
-{
-  "server_id": "srv1",
-  "api_url": "https://dashboard.ecabot.site/api",
-  "api_key": "eca-dev-api-key-2026",
-  "heartbeat_interval": 30,
-  "screenshot_interval": 10
-}

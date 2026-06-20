@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Collections.Concurrent;
 using EcaMonitorAgent.Domain.Interfaces;
 using EcaMonitorAgent.Domain.Models;
 
@@ -9,6 +10,7 @@ namespace EcaMonitorAgent.Infrastructure.Providers;
 public class NativeSessionProvider : ISessionProvider
 {
     private const int WTS_CURRENT_SERVER_HANDLE = 0;
+    private readonly ConcurrentDictionary<string, string> _fullNameCache = new();
 
     [DllImport("wtsapi32.dll", SetLastError = true)]
     private static extern bool WTSEnumerateSessions(
@@ -68,6 +70,43 @@ public class NativeSessionProvider : ISessionProvider
         public byte[] Address;
     }
 
+    private string GetUserFullName(string username)
+    {
+        if (string.IsNullOrWhiteSpace(username)) return string.Empty;
+        
+        username = username.ToLower();
+        if (username == "services" || username == "console" || username == "65536") return string.Empty;
+
+        if (_fullNameCache.TryGetValue(username, out var cachedName))
+        {
+            return cachedName;
+        }
+
+        string fullName = string.Empty;
+        try
+        {
+            using (var searcher = new System.Management.ManagementObjectSearcher($"SELECT FullName FROM Win32_UserAccount WHERE Name = '{username}' AND LocalAccount = True"))
+            {
+                foreach (System.Management.ManagementObject user in searcher.Get())
+                {
+                    var name = user["FullName"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        fullName = name.Trim();
+                        break;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Ignore
+        }
+
+        _fullNameCache[username] = fullName;
+        return fullName;
+    }
+
     public IEnumerable<SessionInfo> GetActiveSessions()
     {
         var sessions = new List<SessionInfo>();
@@ -111,7 +150,8 @@ public class NativeSessionProvider : ISessionProvider
                     State = state,
                     IdleTime = idleTimeString,
                     LogonTime = GetSessionLogonTime(sessionInfo.SessionID),
-                    SourceIp = GetSessionIp(sessionInfo.SessionID)
+                    SourceIp = GetSessionIp(sessionInfo.SessionID),
+                    FullName = GetUserFullName(username)
                 });
             }
 

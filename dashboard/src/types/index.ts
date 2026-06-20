@@ -25,6 +25,7 @@ export interface Session {
   logon_time: string | null;
   source_ip: string | null;
   idle_time: string | null;
+  full_name: string | null;
   updated_at: string;
   server_status?: 'online' | 'offline'; // Added to pass server status to UI
 }
@@ -71,6 +72,7 @@ export interface AgentSessionData {
   idle_time: string;
   logon_time: string;
   source_ip: string;
+  full_name?: string;
 }
 
 export interface AgentHeartbeatPayload {

@@ -24,6 +24,7 @@ public class SocketIOEventDispatcher : IEventDispatcher
         
         var query = new System.Collections.Specialized.NameValueCollection();
         query.Add("server_id", _config.ServerId);
+        query.Add("api_key", _config.ApiKey);
 
         _client = new SocketIO(new Uri(socketUrl), new SocketIOOptions
         {
@@ -78,7 +79,8 @@ public class SocketIOEventDispatcher : IEventDispatcher
                 state = s.State,
                 idle_time = s.IdleTime,
                 logon_time = s.LogonTime,
-                source_ip = s.SourceIp
+                source_ip = s.SourceIp,
+                full_name = s.FullName
             }).ToArray()
         };
 

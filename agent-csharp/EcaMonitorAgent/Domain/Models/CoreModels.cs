@@ -18,6 +18,7 @@ public class SessionInfo
     public required string IdleTime { get; set; }
     public required string LogonTime { get; set; }
     public required string SourceIp { get; set; }
+    public string? FullName { get; set; }
 }
 
 public class AgentConfig

@@ -130,9 +130,16 @@ export default function SessionsPage() {
                                                     <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
                                                         <User className="w-3.5 h-3.5 text-primary" />
                                                     </div>
-                                                    <span className="font-medium font-mono text-sm">
-                                                        {session.username}
-                                                    </span>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium text-sm">
+                                                            {session.full_name || session.username}
+                                                        </span>
+                                                        {session.full_name && (
+                                                            <span className="text-[10px] text-muted-foreground font-mono leading-none mt-0.5">
+                                                                {session.username}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="font-mono text-xs text-muted-foreground">

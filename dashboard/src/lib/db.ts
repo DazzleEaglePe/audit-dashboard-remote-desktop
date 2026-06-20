@@ -39,6 +39,17 @@ function initializeSchema(db: Database.Database): void {
     const schema = fs.readFileSync(schemaPath, 'utf-8');
     db.exec(schema);
   }
+
+  // Database migration: dynamically add full_name column if it does not exist
+  try {
+    const columns = db.prepare("PRAGMA table_info(sessions)").all() as { name: string }[];
+    if (!columns.some(col => col.name === 'full_name')) {
+      db.exec("ALTER TABLE sessions ADD COLUMN full_name TEXT;");
+      console.log("Database migrated: Added 'full_name' column to 'sessions' table.");
+    }
+  } catch (err) {
+    console.error("Migration error for sessions table:", err);
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -125,10 +136,10 @@ export function upsertSessions(serverId: string, sessions: Partial<Session>[]): 
   const db = getDb();
 
   const upsert = db.prepare(`
-    INSERT INTO sessions (server_id, username, session_id, state, logon_time, source_ip, idle_time, updated_at)
-    VALUES (@server_id, @username, @session_id, @state, @logon_time, @source_ip, @idle_time, datetime('now'))
+    INSERT INTO sessions (server_id, username, session_id, state, logon_time, source_ip, idle_time, full_name, updated_at)
+    VALUES (@server_id, @username, @session_id, @state, @logon_time, @source_ip, @idle_time, @full_name, datetime('now'))
     ON CONFLICT(server_id, username, session_id)
-    DO UPDATE SET state = @state, idle_time = @idle_time, source_ip = @source_ip, updated_at = datetime('now')
+    DO UPDATE SET state = @state, idle_time = @idle_time, source_ip = @source_ip, full_name = @full_name, updated_at = datetime('now')
   `);
 
   // Remove stale sessions: build composite keys (session_id, username) to avoid
@@ -188,6 +199,7 @@ export function upsertSessions(serverId: string, sessions: Partial<Session>[]): 
         logon_time: session.logon_time || null,
         source_ip: session.source_ip || null,
         idle_time: session.idle_time || null,
+        full_name: session.full_name || null,
       });
     }
   });

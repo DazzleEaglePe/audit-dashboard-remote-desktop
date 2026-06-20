@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   logon_time    TEXT,                      -- ISO 8601
   source_ip     TEXT,
   idle_time     TEXT,                      -- 'HH:MM:SS'
+  full_name     TEXT,                      -- Windows User Display Name
   updated_at    TEXT DEFAULT (datetime('now')),
   UNIQUE(server_id, username, session_id)
 );

@@ -45,6 +45,7 @@ interface ScreenshotItem {
     username: string;
     session_id: number;
     image_url: string | null;
+    full_name?: string | null;
 }
 
 export default function ScreenshotsPage() {
@@ -191,7 +192,7 @@ export default function ScreenshotsPage() {
                             <CardHeader className="py-2 px-4 flex flex-row items-center justify-between border-b border-border/30 bg-primary/5">
                                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                                     <Pin className="w-4 h-4 text-primary fill-primary" />
-                                    Pantalla Fijada: {USER_DIRECTORY[pinnedScreenshot.username.toLowerCase()] || pinnedScreenshot.username}
+                                    Pantalla Fijada: {pinnedScreenshot.full_name || USER_DIRECTORY[pinnedScreenshot.username.toLowerCase()] || pinnedScreenshot.username}
                                     <Badge variant="secondary" className="text-[10px] uppercase ml-2">
                                         {SERVER_LABELS[pinnedScreenshot.server_id] || pinnedScreenshot.server_id}
                                     </Badge>
@@ -254,6 +255,7 @@ export default function ScreenshotsPage() {
                                                         username: session.username,
                                                         session_id: session.session_id,
                                                         image_url: imgUrl,
+                                                        full_name: session.full_name,
                                                     })
                                                 }
                                             >
@@ -335,8 +337,8 @@ export default function ScreenshotsPage() {
                                                             {/* Teams-style status dot next to username */}
                                                             <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isServerOffline ? 'bg-muted-foreground' : isOffline ? 'bg-red-500' : isIdle ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></span>
                                                             <div className="min-w-0">
-                                                                <p className="text-sm font-medium truncate" title={USER_DIRECTORY[session.username.toLowerCase()] || session.username}>
-                                                                    {USER_DIRECTORY[session.username.toLowerCase()] || session.username}
+                                                                <p className="text-sm font-medium truncate" title={session.full_name || USER_DIRECTORY[session.username.toLowerCase()] || session.username}>
+                                                                    {session.full_name || USER_DIRECTORY[session.username.toLowerCase()] || session.username}
                                                                 </p>
                                                                 <p className="text-xs text-muted-foreground font-mono truncate">
                                                                     {session.username} — #{session.session_id}
@@ -351,7 +353,7 @@ export default function ScreenshotsPage() {
                                                                 className="h-7 w-7 hover:bg-primary/20 hover:text-primary z-30 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100" 
                                                                 onClick={(e) => { 
                                                                     e.stopPropagation(); 
-                                                                    setPinnedScreenshot({ server_id: serverId, username: session.username, session_id: session.session_id, image_url: imgUrl });
+                                                                    setPinnedScreenshot({ server_id: serverId, username: session.username, session_id: session.session_id, image_url: imgUrl, full_name: session.full_name });
                                                                     window.scrollTo({ top: 0, behavior: 'smooth' });
                                                                 }}>
                                                                 <Pin className="w-4 h-4" />
@@ -380,7 +382,7 @@ export default function ScreenshotsPage() {
                         <DialogTitle className="flex items-center justify-between pe-6">
                             <span className="flex items-center gap-2">
                                 <Camera className="w-4 h-4" />
-                                {USER_DIRECTORY[selectedScreenshot?.username?.toLowerCase() || ""] || selectedScreenshot?.username} — {SERVER_LABELS[selectedScreenshot?.server_id || ""] || selectedScreenshot?.server_id}
+                                {selectedScreenshot?.full_name || USER_DIRECTORY[selectedScreenshot?.username?.toLowerCase() || ""] || selectedScreenshot?.username} — {SERVER_LABELS[selectedScreenshot?.server_id || ""] || selectedScreenshot?.server_id}
                             </span>
                         </DialogTitle>
                     </DialogHeader>
