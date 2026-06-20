@@ -141,6 +141,14 @@ export const translations = {
       successMsg: "Perfil actualizado correctamente",
       errorMsg: "Error al actualizar el perfil",
       emptyPassword: "Si no deseas cambiar la contraseña, deja este campo en blanco",
+    },
+    reportsPage: {
+      title: "Reportes y Estadísticas",
+      subtitle: "Módulo de analítica avanzada",
+      constructionTitle: "Módulo en Construcción",
+      constructionDesc: "Estamos diseñando un panel de reportes interactivo con analíticas detalladas de las conexiones, tiempos de inactividad, y estadísticas de auditoría en tiempo real.",
+      comingSoon: "Próximamente disponible",
+      backDashboard: "Volver al Dashboard"
     }
   },
   EN: {
@@ -285,6 +293,14 @@ export const translations = {
       successMsg: "Profile updated successfully",
       errorMsg: "Error updating profile",
       emptyPassword: "If you do not want to change the password, leave this field blank",
+    },
+    reportsPage: {
+      title: "Reports & Statistics",
+      subtitle: "Advanced analytics module",
+      constructionTitle: "Module Under Construction",
+      constructionDesc: "We are designing an interactive reports panel with detailed analytics of connections, idle times, and real-time audit statistics.",
+      comingSoon: "Coming soon",
+      backDashboard: "Back to Dashboard"
     }
   }
 };
