@@ -246,6 +246,8 @@ export default function DashboardPage() {
     const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
     const containerRef = useRef<HTMLDivElement>(null);
 
+    console.log("Dashboard render profileName:", profileName, "loading:", loading);
+
     async function fetchData() {
         try {
             const [serversRes, statsRes, profileRes] = await Promise.all([
@@ -262,7 +264,10 @@ export default function DashboardPage() {
             }
             if (profileRes.ok) {
                 const profileData = await profileRes.json();
+                console.log("Dashboard API fetched profile:", profileData);
                 setProfileName(profileData.fullName || "");
+            } else {
+                console.error("Dashboard API profile fetch failed:", profileRes.status);
             }
         } catch (error) {
             console.error("Error fetching dashboard data:", error);
