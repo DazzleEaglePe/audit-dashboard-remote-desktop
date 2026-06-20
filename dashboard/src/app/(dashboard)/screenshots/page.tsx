@@ -169,7 +169,7 @@ export default function ScreenshotsPage() {
                     <Button
                         variant="outline"
                         size="sm"
-                        className="rounded-xl h-9 hover:bg-accent/40 font-medium text-xs gap-2"
+                        className="rounded-full px-4.5 h-9 border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs gap-2 transition-all duration-300 shadow-sm shadow-primary/5"
                         onClick={() => {
                             fetchSessions();
                             setRefreshKey((k) => k + 1);
@@ -248,11 +248,11 @@ export default function ScreenshotsPage() {
                         .sort(([a], [b]) => a.localeCompare(b))
                         .map(([serverId, serverSessions]) => (
                             <div key={serverId} className="server-section-anim opacity-0 space-y-4">
-                                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                                     <MonitorSmartphone className="w-4 h-4 text-primary" />
-                                    {SERVER_LABELS[serverId] || serverId}
-                                    <Badge variant="secondary" className="text-[10px] font-semibold bg-accent/40 text-foreground border-none rounded-full px-2 py-0.5">
-                                        {serverSessions.length} {serverSessions.length === 1 ? 'sesión' : 'sesiones'}
+                                    {(SERVER_LABELS[serverId] || serverId).toUpperCase()}
+                                    <Badge variant="outline" className="text-[9px] font-bold bg-accent/60 text-foreground border-none rounded-full px-2.5 py-0.5 uppercase tracking-wide">
+                                        {serverSessions.length} {serverSessions.length === 1 ? 'Sesión' : 'Sesiones'}
                                     </Badge>
                                 </h2>
                                 
@@ -262,11 +262,20 @@ export default function ScreenshotsPage() {
                                         const isServerOffline = session.server_status === "offline";
                                         const isOffline = session.state !== "Active";
                                         const isIdle = !isOffline && session.idle_time && !["0", ".", "none", "ninguno"].includes(session.idle_time.trim().toLowerCase());
+                                        const cardBorder = isServerOffline || isOffline
+                                            ? "border-red-500/30 hover:border-red-500/50 shadow-[0_0_12px_rgba(239,68,68,0.06)] hover:shadow-[0_0_20px_rgba(239,68,68,0.18)]"
+                                            : isIdle
+                                            ? "border-amber-500/30 hover:border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.06)] hover:shadow-[0_0_20px_rgba(245,158,11,0.18)]"
+                                            : "border-emerald-500/30 hover:border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.06)] hover:shadow-[0_0_20px_rgba(16,185,129,0.18)]";
 
                                         return (
                                             <Card
                                                 key={`${serverId}-${session.session_id}`}
-                                                className={`glass glass-interactive border-border/20 cursor-pointer overflow-hidden flex flex-col ${(isOffline || isServerOffline) ? "opacity-75" : ""}`}
+                                                className={cn(
+                                                    "glass transition-all duration-300 cursor-pointer overflow-hidden flex flex-col rounded-2xl border",
+                                                    cardBorder,
+                                                    (isOffline || isServerOffline) ? "opacity-75" : ""
+                                                )}
                                                 onClick={() =>
                                                     setSelectedScreenshot({
                                                         server_id: serverId,
@@ -311,20 +320,20 @@ export default function ScreenshotsPage() {
                                                         ) : (
                                                             <div className="absolute top-2.5 left-2.5 z-20 pointer-events-none">
                                                                 {isOffline && (
-                                                                    <Badge variant="outline" className="text-red-400 bg-background/80 border-red-500/20 text-[9px] px-2 py-0.5 backdrop-blur-md rounded-full font-bold flex items-center gap-1 shadow-sm">
+                                                                    <Badge variant="outline" className="text-red-400 bg-red-950/80 border-none text-[9px] px-2 py-0.5 backdrop-blur-md rounded-full font-bold flex items-center gap-1 shadow-sm">
                                                                         <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
                                                                         Desconectada
                                                                     </Badge>
                                                                 )}
                                                                 {isIdle && (
-                                                                    <Badge variant="outline" className="text-amber-500 bg-background/80 border-amber-500/20 text-[9px] px-2 py-0.5 backdrop-blur-md rounded-full font-bold flex items-center gap-1 shadow-sm">
+                                                                    <Badge variant="outline" className="text-amber-400 bg-amber-950/80 border-none text-[9px] px-2 py-0.5 backdrop-blur-md rounded-full font-bold flex items-center gap-1 shadow-sm">
                                                                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block animate-pulse"></span>
                                                                         Inactiva ({session.idle_time})
                                                                     </Badge>
                                                                 )}
                                                                 {!isOffline && !isIdle && (
-                                                                    <Badge variant="outline" className="text-emerald-500 bg-background/80 border-emerald-500/20 text-[9px] px-2 py-0.5 backdrop-blur-md rounded-full font-bold flex items-center gap-1 shadow-sm">
-                                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping inline-block"></span>
+                                                                    <Badge variant="outline" className="text-emerald-400 bg-emerald-950/85 border-none text-[9px] px-2.5 py-0.5 backdrop-blur-md rounded-full font-bold flex items-center gap-1.5 shadow-sm">
+                                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block"></span>
                                                                         Activa
                                                                     </Badge>
                                                                 )}
@@ -344,19 +353,23 @@ export default function ScreenshotsPage() {
                                                         </div>
                                                     </div>
                                                     
-                                                    <div className="mt-3 px-1 flex items-center justify-between flex-1">
+                                                    <div className="mt-3.5 px-1 flex items-center justify-between flex-1">
                                                         <div className="flex items-center gap-2.5 min-w-0">
                                                             {/* User Avatar Circle */}
-                                                            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-primary shrink-0 bg-primary/10",
-                                                                isOffline ? "bg-red-500/10 text-red-500" : isIdle ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-500"
+                                                            <div className={cn("w-8.5 h-8.5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 border",
+                                                                isOffline 
+                                                                    ? "bg-red-500/10 text-red-400 border-red-500/25" 
+                                                                    : isIdle 
+                                                                    ? "bg-amber-500/10 text-amber-400 border-amber-500/25" 
+                                                                    : "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
                                                             )}>
                                                                 {(session.full_name || session.username).substring(0, 2).toUpperCase()}
                                                             </div>
                                                             <div className="min-w-0">
-                                                                <p className="text-xs font-bold truncate leading-tight" title={session.full_name || USER_DIRECTORY[session.username.toLowerCase()] || session.username}>
+                                                                <p className="text-xs font-bold truncate leading-tight text-foreground/90" title={session.full_name || USER_DIRECTORY[session.username.toLowerCase()] || session.username}>
                                                                     {session.full_name || USER_DIRECTORY[session.username.toLowerCase()] || session.username}
                                                                 </p>
-                                                                <p className="text-[10px] text-muted-foreground font-mono mt-0.5 truncate">
+                                                                <p className="text-[10px] text-muted-foreground font-mono mt-1 truncate">
                                                                     {session.username} — ID: {session.session_id}
                                                                 </p>
                                                             </div>

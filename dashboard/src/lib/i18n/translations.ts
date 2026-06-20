@@ -127,6 +127,20 @@ export const translations = {
       markReadToast: "Alerta marcada como leída",
       markAllReadToast: "alertas marcadas como leídas",
       errorToast: "Error al actualizar alerta",
+    },
+    settings: {
+      title: "Configuración de Perfil",
+      subtitle: "Personaliza tu información de administrador, contraseña y foto de perfil",
+      fullName: "Nombre Completo",
+      newPassword: "Nueva Contraseña",
+      confirmPassword: "Confirmar Contraseña",
+      avatarLabel: "Foto de Perfil",
+      avatarUpload: "Subir foto",
+      avatarDrop: "Suelta la imagen aquí...",
+      saveChanges: "Guardar Cambios",
+      successMsg: "Perfil actualizado correctamente",
+      errorMsg: "Error al actualizar el perfil",
+      emptyPassword: "Si no deseas cambiar la contraseña, deja este campo en blanco",
     }
   },
   EN: {
@@ -257,6 +271,20 @@ export const translations = {
       markReadToast: "Alert marked as read",
       markAllReadToast: "alerts marked as read",
       errorToast: "Error updating alert",
+    },
+    settings: {
+      title: "Profile Settings",
+      subtitle: "Customize your administrator details, password, and profile picture",
+      fullName: "Full Name",
+      newPassword: "New Password",
+      confirmPassword: "Confirm Password",
+      avatarLabel: "Profile Picture",
+      avatarUpload: "Upload photo",
+      avatarDrop: "Drop image here...",
+      saveChanges: "Save Changes",
+      successMsg: "Profile updated successfully",
+      errorMsg: "Error updating profile",
+      emptyPassword: "If you do not want to change the password, leave this field blank",
     }
   }
 };

@@ -33,7 +33,6 @@ export function Sidebar() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [unreadAlerts, setUnreadAlerts] = useState(0);
-
     const navItems = [
         { href: "/", label: t("sidebar.dashboard"), icon: LayoutDashboard },
         { href: "/screenshots", label: t("sidebar.screenshots"), icon: Monitor },
@@ -43,6 +42,21 @@ export function Sidebar() {
         { href: "/reports", label: t("sidebar.reports"), icon: LineChart },
         { href: "/settings", label: t("sidebar.settings"), icon: Settings },
     ];
+    const [profile, setProfile] = useState<{ fullName: string; avatarUrl: string; username: string }>({
+        fullName: "Administrador",
+        avatarUrl: "",
+        username: "admin"
+    });
+
+    async function fetchProfile() {
+        try {
+            const res = await fetch("/api/auth/profile");
+            if (res.ok) {
+                const data = await res.json();
+                setProfile(data);
+            }
+        } catch { /* ignore */ }
+    }
 
     useEffect(() => {
         // Hydrate collapse state from local storage or screen size
@@ -66,7 +80,14 @@ export function Sidebar() {
         }
         fetchAlerts();
         const interval = setInterval(fetchAlerts, 30000);
-        return () => clearInterval(interval);
+
+        fetchProfile();
+        window.addEventListener("profile-updated", fetchProfile);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener("profile-updated", fetchProfile);
+        };
     }, []);
 
     const toggleCollapse = () => {
@@ -174,14 +195,19 @@ export function Sidebar() {
             {/* User Profile and Logout Footer */}
             <div className="p-4 border-t border-border/20 flex flex-col gap-3">
                 <div className={cn("flex items-center gap-3 min-w-0", isCollapsed ? "justify-center" : "")}>
-                    <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 text-primary flex items-center justify-center font-bold text-sm shrink-0 shadow-md shadow-primary/5">
-                        AD
+                    <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 text-primary flex items-center justify-center font-bold text-sm shrink-0 shadow-md shadow-primary/5 overflow-hidden">
+                        {profile.avatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                            profile.fullName.substring(0, 2).toUpperCase()
+                        )}
                     </div>
                     <div className={cn("min-w-0 transition-all duration-300 flex-1", isCollapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100 block")}>
                         <div className="flex items-center justify-between">
                             <div className="min-w-0">
-                                <p className="text-xs font-bold text-foreground truncate">Admin</p>
-                                <p className="text-[10px] text-muted-foreground truncate">Administrador</p>
+                                <p className="text-xs font-bold text-foreground truncate">{profile.fullName}</p>
+                                <p className="text-[10px] text-muted-foreground truncate">@{profile.username}</p>
                             </div>
                             <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0 ml-1" />
                         </div>
