@@ -14,6 +14,12 @@ internal static class Program
 {
     static async Task Main(string[] args)
     {
+        var configPath = @"C:\ECA_Monitor\config.json";
+        if (!File.Exists(configPath))
+        {
+            throw new FileNotFoundException($"El archivo de configuración obligatorio no existe: {configPath}");
+        }
+
         var builder = Host.CreateDefaultBuilder(args);
 
         builder.ConfigureServices((hostContext, services) =>
@@ -24,10 +30,6 @@ internal static class Program
             });
 
             // Load Configuration
-            var configPath = @"C:\ECA_Monitor\config.json";
-            if (!File.Exists(configPath))
-                return;
-
             var jsonString = File.ReadAllText(configPath);
             var jsonDoc = JsonDocument.Parse(jsonString);
             var root = jsonDoc.RootElement;

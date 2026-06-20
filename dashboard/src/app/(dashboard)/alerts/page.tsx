@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState, useRef } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +17,8 @@ import {
 import { toast } from "sonner";
 import type { Alert } from "@/types";
 import { useLanguage } from "@/components/language-provider";
-import { parseUtcDate } from "@/lib/utils";
+import { parseUtcDate, cn } from "@/lib/utils";
+import { gsap } from "gsap";
 
 const ALERT_CONFIG: Record<string, { icon: React.ElementType; color: string }> = {
     server_down: {
@@ -53,6 +54,7 @@ export default function AlertsPage() {
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [loading, setLoading] = useState(true);
     const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     async function fetchAlerts() {
         try {
@@ -72,6 +74,21 @@ export default function AlertsPage() {
         fetchAlerts();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [showUnreadOnly]);
+
+    useEffect(() => {
+        if (!loading && containerRef.current) {
+            const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+            tl.fromTo(containerRef.current.querySelector(".alerts-header"),
+                { opacity: 0, y: -12 },
+                { opacity: 1, y: 0, duration: 0.6 }
+            )
+            .fromTo(containerRef.current.querySelectorAll(".alert-card-anim"),
+                { opacity: 0, y: 15 },
+                { opacity: 1, y: 0, duration: 0.5, stagger: 0.06 },
+                "-=0.45"
+            );
+        }
+    }, [loading, alerts.length]);
 
     async function markAsRead(alertId: number) {
         try {
@@ -107,11 +124,11 @@ export default function AlertsPage() {
     const unreadCount = alerts.filter((a) => a.is_read === 0).length;
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div ref={containerRef} className="space-y-6">
+            <div className="alerts-header opacity-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">{t("alerts.title")}</h1>
-                    <p className="text-muted-foreground text-sm mt-1">
+                    <p className="text-muted-foreground text-sm mt-1 font-medium">
                         {unreadCount} {t("alerts.unreadAlerts")}
                     </p>
                 </div>
@@ -119,13 +136,14 @@ export default function AlertsPage() {
                     <Button
                         variant={showUnreadOnly ? "default" : "outline"}
                         size="sm"
+                        className="rounded-xl transition-all duration-300 font-semibold"
                         onClick={() => setShowUnreadOnly(!showUnreadOnly)}
                     >
                         <Bell className="w-4 h-4 mr-2" />
                         {showUnreadOnly ? t("alerts.showingUnread") : t("alerts.showOnlyUnread")}
                     </Button>
                     {unreadCount > 0 && (
-                        <Button variant="outline" size="sm" onClick={markAllRead}>
+                        <Button variant="outline" size="sm" className="rounded-xl transition-all duration-300 font-semibold" onClick={markAllRead}>
                             <CheckCircle className="w-4 h-4 mr-2" />
                             {t("alerts.markAllRead")}
                         </Button>
@@ -136,21 +154,21 @@ export default function AlertsPage() {
             {loading ? (
                 <div className="space-y-3">
                     {[1, 2, 3].map((i) => (
-                        <Card key={i} className="glass border-border/30 animate-pulse">
-                            <CardContent className="p-4 h-20" />
+                        <Card key={i} className="glass border-border/20 animate-pulse">
+                            <div className="p-4 h-20" />
                         </Card>
                     ))}
                 </div>
             ) : alerts.length === 0 ? (
-                <Card className="glass border-border/30">
-                    <CardContent className="py-16 text-center text-muted-foreground">
+                <Card className="glass border-border/20 alert-card-anim opacity-0">
+                    <div className="py-16 text-center text-muted-foreground">
                         <CheckCircle className="w-16 h-16 mx-auto mb-4 opacity-20 text-emerald-500" />
-                        <p className="text-lg">{t("alerts.allClear")}</p>
+                        <p className="text-lg font-semibold">{t("alerts.allClear")}</p>
                         <p className="text-sm mt-1">{t("alerts.noAlertsPrefix")} {showUnreadOnly ? t("alerts.noAlertsSuffix") : ""}</p>
-                    </CardContent>
+                    </div>
                 </Card>
             ) : (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                     {alerts.map((alert) => {
                         const config = ALERT_CONFIG[alert.alert_type] || {
                             icon: AlertTriangle,
@@ -167,48 +185,59 @@ export default function AlertsPage() {
                         const AlertIcon = config.icon;
                         const isUnread = alert.is_read === 0;
 
+                        const iconBgColor = alert.severity === "critical"
+                            ? "bg-red-500/10 text-red-500 shadow-[0_0_12px_rgba(239,68,68,0.12)]"
+                            : alert.severity === "warning"
+                            ? "bg-amber-500/10 text-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.12)]"
+                            : "bg-blue-500/10 text-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.12)]";
+
                         return (
-                            <Card
-                                key={alert.id}
-                                className={`glass border-border/30 transition-all duration-200 ${isUnread ? "border-l-2 border-l-primary" : "opacity-60"
-                                    }`}
-                            >
-                                <CardContent className="p-4">
-                                    <div className="flex items-start gap-4">
-                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${`bg-accent`
-                                            }`}>
-                                            <AlertIcon className={`w-5 h-5 ${config.color}`} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-medium text-sm">{label}</span>
-                                                <Badge className={`text-[10px] ${SEVERITY_COLORS[alert.severity] || ""}`}>
-                                                    {alert.severity === "critical" ? t("alerts.sevCritical") : alert.severity === "warning" ? t("alerts.sevWarning") : t("alerts.sevInfo")}
-                                                </Badge>
-                                                {alert.server_id && (
-                                                    <Badge variant="secondary" className="text-[10px] font-mono">
-                                                        {alert.server_id.toUpperCase()}
-                                                    </Badge>
-                                                )}
+                            <div key={alert.id} className="alert-card-anim opacity-0">
+                                <Card
+                                    className={cn(
+                                        "glass transition-all duration-300",
+                                        isUnread 
+                                            ? "border-l-3 border-l-primary shadow-[0_0_15px_rgba(99,102,241,0.06)] bg-primary/5!" 
+                                            : "opacity-60 hover:opacity-100"
+                                    )}
+                                >
+                                    <div className="p-4">
+                                        <div className="flex items-start gap-4">
+                                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300", iconBgColor)}>
+                                                <AlertIcon className="w-5 h-5" />
                                             </div>
-                                            <p className="text-sm text-muted-foreground">{alert.message}</p>
-                                            <p className="text-xs text-muted-foreground/60 mt-1">
-                                                {parseUtcDate(alert.created_at)?.toLocaleString("es-PE")}
-                                            </p>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                    <span className="font-bold text-sm leading-none">{label}</span>
+                                                    <Badge className={cn("text-[9px] font-semibold border-none rounded-full px-2 py-0.5", SEVERITY_COLORS[alert.severity] || "")}>
+                                                        {alert.severity === "critical" ? t("alerts.sevCritical") : alert.severity === "warning" ? t("alerts.sevWarning") : t("alerts.sevInfo")}
+                                                    </Badge>
+                                                    {alert.server_id && (
+                                                        <Badge variant="outline" className="text-[9px] font-semibold bg-accent/30 text-muted-foreground border-border/10 rounded-lg px-1.5 py-0">
+                                                            {alert.server_id.toUpperCase()}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-muted-foreground font-medium mt-1.5">{alert.message}</p>
+                                                <p className="text-[10px] text-muted-foreground/60 mt-2 font-mono">
+                                                    {parseUtcDate(alert.created_at)?.toLocaleString("es-PE")}
+                                                </p>
+                                            </div>
+                                            {isUnread && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="shrink-0 h-8 w-8 hover:bg-emerald-500/10 hover:text-emerald-500 rounded-xl transition-all duration-300"
+                                                    onClick={() => markAsRead(alert.id)}
+                                                    title={t("alerts.markReadToast")}
+                                                >
+                                                    <CheckCircle className="w-4 h-4" />
+                                                </Button>
+                                            )}
                                         </div>
-                                        {isUnread && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="shrink-0"
-                                                onClick={() => markAsRead(alert.id)}
-                                            >
-                                                <CheckCircle className="w-4 h-4" />
-                                            </Button>
-                                        )}
                                     </div>
-                                </CardContent>
-                            </Card>
+                                </Card>
+                            </div>
                         );
                     })}
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,8 @@ import {
 import { ScrollText, Search, ChevronLeft, ChevronRight, LogIn, LogOut, Clock, Zap } from "lucide-react";
 import type { SessionLog } from "@/types";
 import { useLanguage } from "@/components/language-provider";
-import { parseUtcDate } from "@/lib/utils";
+import { parseUtcDate, cn } from "@/lib/utils";
+import { gsap } from "gsap";
 
 const EVENT_CONFIG: Record<string, { icon: React.ElementType; color: string }> = {
     connect: { icon: LogIn, color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
@@ -41,6 +42,22 @@ export default function LogsPage() {
     const [usernameFilter, setUsernameFilter] = useState("");
     const [serverFilter, setServerFilter] = useState("all");
     const limit = 25;
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!loading && containerRef.current) {
+            const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+            tl.fromTo(containerRef.current.querySelector(".logs-header"),
+                { opacity: 0, y: -12 },
+                { opacity: 1, y: 0, duration: 0.6 }
+            )
+            .fromTo(containerRef.current.querySelectorAll(".logs-anim-element"),
+                { opacity: 0, y: 15 },
+                { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 },
+                "-=0.45"
+            );
+        }
+    }, [loading]);
 
     async function fetchLogs() {
         try {
@@ -79,8 +96,8 @@ export default function LogsPage() {
     const totalPages = Math.ceil(total / limit);
 
     return (
-        <div className="space-y-6">
-            <div>
+        <div ref={containerRef} className="space-y-6">
+            <div className="logs-header opacity-0">
                 <h1 className="text-2xl font-bold">{t("logs.title")}</h1>
                 <p className="text-muted-foreground text-sm mt-1">
                     {t("logs.subtitle")}
@@ -88,31 +105,31 @@ export default function LogsPage() {
             </div>
 
             {/* Filters */}
-            <Card className="glass border-border/30">
+            <Card className="logs-anim-element opacity-0 glass border-border/20 rounded-2xl">
                 <CardContent className="p-4">
                     <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
                         <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
                             <Input
                                 placeholder={t("logs.searchPlaceholder")}
                                 value={usernameFilter}
                                 onChange={(e) => setUsernameFilter(e.target.value.toUpperCase())}
-                                className="pl-9"
+                                className="pl-10 rounded-xl border-border/20"
                             />
                         </div>
                         <Select value={serverFilter} onValueChange={(v) => { setServerFilter(v); setPage(0); }}>
-                            <SelectTrigger className="w-48">
+                            <SelectTrigger className="w-48 rounded-xl border-border/20 backdrop-blur-md">
                                 <SelectValue placeholder={t("logs.serverPlaceholder")} />
                             </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">{t("logs.filterAll")}</SelectItem>
-                                <SelectItem value="srv1">{t("logs.server1")}</SelectItem>
-                                <SelectItem value="srv2">{t("logs.server2")}</SelectItem>
-                                <SelectItem value="srv3">{t("logs.server3")}</SelectItem>
+                            <SelectContent className="rounded-xl border-border/20 backdrop-blur-md">
+                                <SelectItem value="all" className="rounded-lg">{t("logs.filterAll")}</SelectItem>
+                                <SelectItem value="srv1" className="rounded-lg">{t("logs.server1")}</SelectItem>
+                                <SelectItem value="srv2" className="rounded-lg">{t("logs.server2")}</SelectItem>
+                                <SelectItem value="srv3" className="rounded-lg">{t("logs.server3")}</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Button type="submit" variant="secondary">
-                            <Search className="w-4 h-4 mr-2" />
+                        <Button type="submit" variant="secondary" className="rounded-xl h-9 hover:bg-accent/40 font-medium text-xs gap-1.5 shrink-0">
+                            <Search className="w-3.5 h-3.5" />
                             {t("logs.searchButton")}
                         </Button>
                     </form>
@@ -120,40 +137,40 @@ export default function LogsPage() {
             </Card>
 
             {/* Logs Table */}
-            <Card className="glass border-border/30">
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                        <ScrollText className="w-4 h-4 text-primary" />
+            <Card className="logs-anim-element opacity-0 glass border-border/20 rounded-2xl overflow-hidden">
+                <CardHeader className="border-b border-border/10 pb-4">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                        <ScrollText className="w-4.5 h-4.5 text-primary" />
                         {t("logs.recordsTitle")}
-                        <Badge variant="secondary" className="text-xs font-normal ml-2">
+                        <Badge variant="secondary" className="text-[10px] font-semibold bg-accent/40 text-foreground border-none rounded-full px-2.5 py-0.5 ml-1">
                             {total} {t("logs.recordsCount")}
                         </Badge>
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                     {loading ? (
-                        <div className="space-y-3">
+                        <div className="p-6 space-y-3">
                             {[1, 2, 3, 4, 5].map((i) => (
-                                <div key={i} className="h-10 bg-accent rounded animate-pulse" />
+                                <div key={i} className="h-10 bg-accent/40 rounded-xl animate-pulse" />
                             ))}
                         </div>
                     ) : logs.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                            <ScrollText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                            <p>{t("logs.noRecords")}</p>
+                        <div className="text-center py-16 text-muted-foreground">
+                            <ScrollText className="w-16 h-16 mx-auto mb-4 opacity-15 animate-pulse" />
+                            <p className="text-base font-semibold">{t("logs.noRecords")}</p>
                         </div>
                     ) : (
                         <>
                             <div className="overflow-x-auto">
                                 <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-40">{t("logs.colDate")}</TableHead>
-                                            <TableHead>{t("logs.colEvent")}</TableHead>
-                                            <TableHead>{t("logs.colUser")}</TableHead>
-                                            <TableHead>{t("logs.colServer")}</TableHead>
-                                            <TableHead>{t("logs.colSessionId")}</TableHead>
-                                            <TableHead>{t("logs.colIp")}</TableHead>
+                                    <TableHeader className="bg-accent/15">
+                                        <TableRow className="border-b border-border/10 hover:bg-transparent">
+                                            <TableHead className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground h-11 px-5 w-48">{t("logs.colDate")}</TableHead>
+                                            <TableHead className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground h-11">{t("logs.colEvent")}</TableHead>
+                                            <TableHead className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground h-11">{t("logs.colUser")}</TableHead>
+                                            <TableHead className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground h-11">{t("logs.colServer")}</TableHead>
+                                            <TableHead className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground h-11">{t("logs.colSessionId")}</TableHead>
+                                            <TableHead className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground h-11 px-5">{t("logs.colIp")}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -168,8 +185,8 @@ export default function LogsPage() {
                                             if (log.event_type === "idle") label = t("logs.eventIdle");
 
                                             return (
-                                                <TableRow key={log.id} className="hover:bg-accent/50 transition-colors">
-                                                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                                                <TableRow key={log.id} className="border-b border-border/10 hover:bg-accent/25 transition-colors">
+                                                    <TableCell className="text-xs text-muted-foreground/80 font-mono whitespace-nowrap px-5 py-3">
                                                         {parseUtcDate(log.timestamp)?.toLocaleString("es-PE", {
                                                             day: "2-digit",
                                                             month: "2-digit",
@@ -179,22 +196,24 @@ export default function LogsPage() {
                                                             second: "2-digit",
                                                         })}
                                                     </TableCell>
-                                                    <TableCell>
-                                                        <Badge className={`text-xs ${eventConf.color}`}>
+                                                    <TableCell className="py-3">
+                                                        <Badge className={cn("text-[9px] font-semibold border-none rounded-full px-2 py-0.5", eventConf.color)}>
                                                             <EventIcon className="w-3 h-3 mr-1" />
                                                             {label}
                                                         </Badge>
                                                     </TableCell>
-                                                    <TableCell className="font-mono text-sm font-medium">
+                                                    <TableCell className="font-mono text-xs font-semibold py-3">
                                                         {log.username}
                                                     </TableCell>
-                                                    <TableCell className="font-mono text-xs text-muted-foreground">
-                                                        {log.server_id.toUpperCase()}
+                                                    <TableCell className="py-3">
+                                                        <Badge variant="outline" className="font-mono text-[9px] bg-accent/30 text-muted-foreground border-border/10 rounded-lg px-2 py-0.5">
+                                                            {log.server_id.toUpperCase()}
+                                                        </Badge>
                                                     </TableCell>
-                                                    <TableCell className="font-mono text-sm">
+                                                    <TableCell className="font-mono text-xs py-3">
                                                         {log.session_id ?? "—"}
                                                     </TableCell>
-                                                    <TableCell className="font-mono text-xs">
+                                                    <TableCell className="font-mono text-xs py-3 px-5">
                                                         {log.source_ip || "—"}
                                                     </TableCell>
                                                 </TableRow>
@@ -205,16 +224,17 @@ export default function LogsPage() {
                             </div>
 
                             {/* Pagination */}
-                            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
-                                <p className="text-xs text-muted-foreground">
+                            <div className="flex items-center justify-between p-4 border-t border-border/10 bg-accent/5">
+                                <p className="text-xs text-muted-foreground font-medium">
                                     {t("logs.showing")} {page * limit + 1}–{Math.min((page + 1) * limit, total)} {t("logs.of")} {total}
                                 </p>
-                                <div className="flex gap-2">
+                                <div className="flex gap-1.5">
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         disabled={page === 0}
                                         onClick={() => setPage((p) => p - 1)}
+                                        className="rounded-xl h-8 px-2.5"
                                     >
                                         <ChevronLeft className="w-4 h-4" />
                                     </Button>
@@ -223,6 +243,7 @@ export default function LogsPage() {
                                         size="sm"
                                         disabled={page >= totalPages - 1}
                                         onClick={() => setPage((p) => p + 1)}
+                                        className="rounded-xl h-8 px-2.5"
                                     >
                                         <ChevronRight className="w-4 h-4" />
                                     </Button>

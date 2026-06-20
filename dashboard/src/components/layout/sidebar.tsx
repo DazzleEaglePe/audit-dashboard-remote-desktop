@@ -115,20 +115,20 @@ export function Sidebar() {
     const NavContent = () => (
         <>
             {/* Logo */}
-            <div className={cn("p-6 border-b border-border/50 transition-all duration-300", isCollapsed ? "px-4 items-center flex justify-center" : "")}>
-                <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="min-w-10 min-h-10 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <div className={cn("p-6 border-b border-border/20 transition-all duration-300", isCollapsed ? "px-4 items-center flex justify-center" : "")}>
+                <div className="flex items-center gap-3 overflow-hidden group/logo">
+                    <div className="min-w-10 min-h-10 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 shadow-lg shadow-primary/5 group-hover/logo:scale-105 transition-transform duration-300">
                         <Shield className="w-5 h-5 text-primary" />
                     </div>
                     <div className={cn("transition-all duration-300 truncate", isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100")}>
-                        <h1 className="font-bold text-sm truncate">{t("sidebar.title")}</h1>
-                        <p className="text-xs text-muted-foreground truncate">{t("sidebar.subtitle")}</p>
+                        <h1 className="font-bold text-sm tracking-tight truncate">{t("sidebar.title")}</h1>
+                        <p className="text-[10px] text-muted-foreground tracking-wide uppercase truncate font-semibold mt-0.5">{t("sidebar.subtitle")}</p>
                     </div>
                 </div>
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden">
+            <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto overflow-x-hidden">
                 {navItems.map((item) => {
                     const isActive = pathname === item.href;
                     return (
@@ -138,19 +138,23 @@ export function Sidebar() {
                             onClick={() => setMobileOpen(false)}
                             title={isCollapsed ? item.label : undefined}
                             className={cn(
-                                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative",
+                                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative",
                                 isActive
-                                    ? "bg-primary/10 text-primary"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-accent",
-                                isCollapsed ? "justify-center px-0" : ""
+                                    ? "bg-gradient-to-r from-primary/15 to-primary/5 text-primary border-l-2 border-primary shadow-[inset_1px_0_0_0_rgba(255,255,255,0.03)]"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-accent/40",
+                                isCollapsed ? "justify-center px-0 border-l-0" : ""
                             )}
                         >
-                            <item.icon className="w-5 h-5 shrink-0" />
+                            {/* Glowing Active Border Dot for Collapsed mode */}
+                            {isActive && isCollapsed && (
+                                <div className="absolute left-1 w-1 h-6 bg-primary rounded-full shadow-[0_0_10px_var(--primary)]" />
+                            )}
+                            <item.icon className={cn("w-5 h-5 shrink-0 transition-transform duration-300 group-hover:scale-105", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
                             <span className={cn("transition-all duration-300 truncate", isCollapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100 block")}>
                                 {item.label}
                             </span>
                             {item.href === "/alerts" && unreadAlerts > 0 && (
-                                <Badge variant="destructive" className={cn("transition-all", isCollapsed ? "absolute top-1 right-2 w-2 h-2 p-0 rounded-full text-[0px]" : "ml-auto text-xs h-5 px-1.5")}>
+                                <Badge variant="destructive" className={cn("transition-all border-none bg-red-500 text-white font-semibold", isCollapsed ? "absolute top-1 right-2 w-2 h-2 p-0 rounded-full text-[0px]" : "ml-auto text-[10px] h-4.5 px-1.5 rounded-full")}>
                                     {!isCollapsed && unreadAlerts}
                                 </Badge>
                             )}
@@ -160,10 +164,10 @@ export function Sidebar() {
             </nav>
 
             {/* Footer */}
-            <div className="p-4 border-t border-border/50 flex flex-col gap-2">
+            <div className="p-4 border-t border-border/20 flex flex-col gap-1.5">
                 <Button
                     variant="ghost"
-                    className={cn("w-full gap-3 text-muted-foreground hover:text-foreground transition-all", isCollapsed ? "justify-center px-0" : "justify-start")}
+                    className={cn("w-full gap-3 text-muted-foreground hover:text-foreground hover:bg-red-500/10 hover:text-red-500 transition-all rounded-xl", isCollapsed ? "justify-center px-0" : "justify-start")}
                     onClick={handleLogout}
                     title={isCollapsed ? t("sidebar.logout") : undefined}
                 >
@@ -175,7 +179,7 @@ export function Sidebar() {
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="hidden md:flex w-full justify-center text-muted-foreground hover:bg-accent h-8 mt-2"
+                    className="hidden md:flex w-full justify-center text-muted-foreground hover:bg-accent/40 h-8 mt-2 rounded-lg"
                     onClick={toggleCollapse}
                 >
                     {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -190,7 +194,7 @@ export function Sidebar() {
             <Button
                 variant="outline"
                 size="icon"
-                className="fixed top-3 left-4 z-50 md:hidden bg-background/80 backdrop-blur-sm border-border/50"
+                className="fixed top-3 left-4 z-50 md:hidden bg-background/80 backdrop-blur-md border-border/20 shadow-md rounded-xl"
                 onClick={() => setMobileOpen(!mobileOpen)}
             >
                 {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -199,7 +203,7 @@ export function Sidebar() {
             {/* Mobile overlay */}
             {mobileOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
+                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
                     onClick={() => setMobileOpen(false)}
                 />
             )}
@@ -207,11 +211,11 @@ export function Sidebar() {
             {/* Sidebar Desktop & Mobile */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 h-full bg-card/95 backdrop-blur-xl border-r border-border/50 flex flex-col z-50 transition-all duration-300 ease-in-out",
+                    "fixed flex flex-col z-50 transition-all duration-300 ease-in-out glass-ios",
                     // Mobile classes
-                    mobileOpen ? "translate-x-0 w-64 shadow-2xl" : "-translate-x-full",
-                    // Desktop classes
-                    "md:translate-x-0",
+                    mobileOpen ? "translate-x-0 w-64 shadow-2xl top-0 left-0 h-full rounded-none border-r border-border/20" : "-translate-x-full top-0 left-0 h-full rounded-none border-r border-border/20",
+                    // Desktop classes (Apple iOS floating widgets layout)
+                    "md:translate-x-0 md:top-4 md:left-4 md:h-[calc(100vh-2rem)] md:rounded-2xl md:border md:border-white/10 md:shadow-[0_10px_40px_rgba(0,0,0,0.18)]",
                     isCollapsed ? "md:w-20" : "md:w-64"
                 )}
             >
