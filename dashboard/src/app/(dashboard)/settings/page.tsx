@@ -53,7 +53,7 @@ export default function SettingsPage() {
     if (!loading && formRef.current) {
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
       tl.fromTo(
-        formRef.current.querySelector(".settings-header"),
+        formRef.current,
         { opacity: 0, y: -12 },
         { opacity: 1, y: 0, duration: 0.6 }
       ).fromTo(
@@ -195,7 +195,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div ref={formRef} className="space-y-6 max-w-4xl mx-auto opacity-0 settings-header">
+    <div ref={formRef} className="space-y-6 max-w-4xl mx-auto" style={{ opacity: 0 }}>
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold">{t("settings.title") as string}</h1>
         <p className="text-muted-foreground text-sm">
