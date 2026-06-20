@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
-import { Languages, ChevronRight, Home } from "lucide-react";
+import { Globe, ChevronRight, Home, ChevronDown } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import {
@@ -60,9 +60,10 @@ export function Topbar() {
                 {/* Language Toggle */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-9 gap-2 font-medium rounded-xl hover:bg-accent/40 text-xs">
-                            <Languages className="w-3.5 h-3.5 text-muted-foreground" />
+                        <Button variant="ghost" size="sm" className="h-9 gap-1.5 font-semibold rounded-xl hover:bg-accent/40 text-xs text-foreground/80">
+                            <Globe className="w-4 h-4 text-muted-foreground/80" />
                             <span className="hidden sm:inline-block">{lang === "ES" ? "Español" : "English"}</span>
+                            <ChevronDown className="w-3 h-3 text-muted-foreground/60" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="rounded-xl border-border/20 backdrop-blur-md">

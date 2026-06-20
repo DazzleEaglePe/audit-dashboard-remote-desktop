@@ -14,7 +14,12 @@ import {
     Menu,
     X,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Users,
+    Server,
+    LineChart,
+    Settings,
+    ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,10 +36,12 @@ export function Sidebar() {
 
     const navItems = [
         { href: "/", label: t("sidebar.dashboard"), icon: LayoutDashboard },
-        { href: "/sessions", label: t("sidebar.sessions"), icon: Monitor },
-        { href: "/screenshots", label: t("sidebar.screenshots"), icon: Camera },
-        { href: "/logs", label: t("sidebar.logs"), icon: ScrollText },
+        { href: "/screenshots", label: t("sidebar.screenshots"), icon: Monitor },
+        { href: "/sessions", label: t("sidebar.sessions"), icon: Users },
+        { href: "/#servers", label: t("sidebar.servers"), icon: Server },
         { href: "/alerts", label: t("sidebar.alerts"), icon: Bell },
+        { href: "/reports", label: t("sidebar.reports"), icon: LineChart },
+        { href: "/settings", label: t("sidebar.settings"), icon: Settings },
     ];
 
     useEffect(() => {
@@ -138,11 +145,11 @@ export function Sidebar() {
                             onClick={() => setMobileOpen(false)}
                             title={isCollapsed ? item.label : undefined}
                             className={cn(
-                                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative",
+                                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative border border-transparent",
                                 isActive
-                                    ? "bg-gradient-to-r from-primary/15 to-primary/5 text-primary border-l-2 border-primary shadow-[inset_1px_0_0_0_rgba(255,255,255,0.03)]"
+                                    ? "bg-primary/10 text-primary border-primary shadow-[0_0_12px_rgba(99,102,241,0.18)]"
                                     : "text-muted-foreground hover:text-foreground hover:bg-accent/40",
-                                isCollapsed ? "justify-center px-0 border-l-0" : ""
+                                isCollapsed ? "justify-center px-0" : ""
                             )}
                         >
                             {/* Glowing Active Border Dot for Collapsed mode */}
@@ -164,22 +171,38 @@ export function Sidebar() {
             </nav>
 
             {/* Footer */}
-            <div className="p-4 border-t border-border/20 flex flex-col gap-1.5">
+            {/* User Profile and Logout Footer */}
+            <div className="p-4 border-t border-border/20 flex flex-col gap-3">
+                <div className={cn("flex items-center gap-3 min-w-0", isCollapsed ? "justify-center" : "")}>
+                    <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 text-primary flex items-center justify-center font-bold text-sm shrink-0 shadow-md shadow-primary/5">
+                        AD
+                    </div>
+                    <div className={cn("min-w-0 transition-all duration-300 flex-1", isCollapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100 block")}>
+                        <div className="flex items-center justify-between">
+                            <div className="min-w-0">
+                                <p className="text-xs font-bold text-foreground truncate">Admin</p>
+                                <p className="text-[10px] text-muted-foreground truncate">Administrador</p>
+                            </div>
+                            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0 ml-1" />
+                        </div>
+                    </div>
+                </div>
+
                 <Button
                     variant="ghost"
-                    className={cn("w-full gap-3 text-muted-foreground hover:text-foreground hover:bg-red-500/10 hover:text-red-500 transition-all rounded-xl", isCollapsed ? "justify-center px-0" : "justify-start")}
+                    className={cn("w-full gap-3 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all rounded-xl", isCollapsed ? "justify-center px-0" : "justify-start px-3")}
                     onClick={handleLogout}
                     title={isCollapsed ? t("sidebar.logout") : undefined}
                 >
                     <LogOut className="w-5 h-5 shrink-0" />
-                    <span className={cn("transition-all duration-300 truncate", isCollapsed ? "w-0 opacity-0 hidden" : "block")}>{t("sidebar.logout")}</span>
+                    <span className={cn("transition-all duration-300 truncate text-xs font-semibold", isCollapsed ? "w-0 opacity-0 hidden" : "block")}>{t("sidebar.logout")}</span>
                 </Button>
 
                 {/* Desktop Collapse Toggle */}
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="hidden md:flex w-full justify-center text-muted-foreground hover:bg-accent/40 h-8 mt-2 rounded-lg"
+                    className="hidden md:flex w-full justify-center text-muted-foreground hover:bg-accent/40 h-8 mt-1 rounded-lg"
                     onClick={toggleCollapse}
                 >
                     {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
