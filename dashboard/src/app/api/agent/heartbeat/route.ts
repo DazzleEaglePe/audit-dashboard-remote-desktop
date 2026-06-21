@@ -10,6 +10,8 @@ import {
   insertServerMetrics,
   checkServerTimeouts,
   insertAlert,
+  cleanOldMetrics,
+  cleanOldLogs,
 } from '@/lib/db';
 import type { AgentHeartbeatPayload } from '@/types';
 
@@ -73,6 +75,16 @@ export async function POST(request: NextRequest) {
         severity: 'critical',
         message: `Servidor ${serverId} sin respuesta (sin heartbeat por >2 min)`,
       });
+    }
+
+    // Run data retention cleanups
+    try {
+      const metricsRetentionDays = process.env.RETENTION_METRICS_DAYS ? parseInt(process.env.RETENTION_METRICS_DAYS, 10) : 7;
+      const logsRetentionDays = process.env.RETENTION_LOGS_DAYS ? parseInt(process.env.RETENTION_LOGS_DAYS, 10) : 90;
+      cleanOldMetrics(metricsRetentionDays);
+      cleanOldLogs(logsRetentionDays);
+    } catch (cleanupError) {
+      console.error('Error during data retention cleanup:', cleanupError);
     }
 
     // Emit WebSocket event (will be handled by custom server)
