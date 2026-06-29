@@ -97,8 +97,8 @@ export async function POST(request: NextRequest) {
       })
       .where(eq(usersTable.id, user.id));
 
-    // Check if onboarding is required
-    const needsOnboarding = await tenantNeedsOnboarding(user.tenant_id);
+    // Check if onboarding is required (exclude viewers)
+    const needsOnboarding = user.role !== 'viewer' && await tenantNeedsOnboarding(user.tenant_id);
 
     // Log the user in by generating a JWT
     const jwtToken = jwt.sign(

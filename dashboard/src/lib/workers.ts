@@ -79,6 +79,29 @@ async function dispatchAlertWebhooks(alert: typeof alertsTable.$inferSelect) {
         console.error(`[WORKERS] Error sending MS Teams alert for tenant ${alert.tenant_id}:`, err);
       }
     }
+
+    // Email Integration (Part B)
+    if (alert.severity === 'critical') {
+      try {
+        const rawEmails = settings.alert_emails?.trim();
+        if (rawEmails) {
+          const recipients = rawEmails.split(',').map(e => e.trim()).filter(Boolean);
+          if (recipients.length > 0) {
+            await db.insert(notificationsTable).values({
+              tenant_id: alert.tenant_id,
+              title: `🚨 Alerta ECA: ${alert.alert_type} (${alert.severity})`,
+              message: `Servidor: ${alert.server_id}\nTipo: ${alert.alert_type}\nGravedad: ${alert.severity}\nMensaje: ${alert.message}`,
+              type: 'alert',
+              email_sent: 0,
+              recipient_email: recipients.join(','),
+            });
+            console.log(`[WORKERS] Queued critical alert email notification for tenant ${alert.tenant_id} to: ${recipients.join(',')}`);
+          }
+        }
+      } catch (err) {
+        console.error(`[WORKERS] Error queueing email alert for tenant ${alert.tenant_id}:`, err);
+      }
+    }
   } catch (err) {
     console.error("[WORKERS] Error in dispatchAlertWebhooks:", err);
   }

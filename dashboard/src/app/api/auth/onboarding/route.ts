@@ -5,6 +5,13 @@ import { tenant_settings, admin_audit_logs } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { JWT_SECRET } from '@/lib/auth-config';
 
+interface OnboardingJWTPayload {
+  tenantId: string;
+  username: string;
+  role: string;
+  mustChangePassword?: boolean;
+}
+
 // POST /api/auth/onboarding - Save alert emails and complete onboarding
 export async function POST(request: NextRequest) {
   try {
@@ -14,9 +21,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    let payload: any;
+    let payload: OnboardingJWTPayload;
     try {
-      payload = jwt.verify(token, JWT_SECRET);
+      payload = jwt.verify(token, JWT_SECRET) as OnboardingJWTPayload;
     } catch (err) {
       console.error('Invalid token on onboarding POST:', err);
       return NextResponse.json({ error: 'Sesión inválida o expirada' }, { status: 401 });
@@ -42,18 +49,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Uno o más correos ingresados tienen un formato inválido' }, { status: 400 });
     }
 
+    const normalizedEmails = emails.join(',');
     const db = getDrizzleDb();
 
     // 3. Upsert into tenant_settings table
     await db.insert(tenant_settings)
       .values({
         tenant_id: tenantId,
-        alert_emails: alertEmails,
+        alert_emails: normalizedEmails,
       })
       .onConflictDoUpdate({
         target: tenant_settings.tenant_id,
         set: {
-          alert_emails: alertEmails,
+          alert_emails: normalizedEmails,
         },
       });
 
@@ -65,7 +73,7 @@ export async function POST(request: NextRequest) {
         username: username,
         action: 'complete_onboarding',
         ip_address: ip,
-        details: JSON.stringify({ alert_emails: alertEmails }),
+        details: JSON.stringify({ alert_emails: normalizedEmails }),
       });
     } catch (auditErr) {
       console.error('Error logging onboarding to audit logs:', auditErr);

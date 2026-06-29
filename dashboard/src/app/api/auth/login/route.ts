@@ -54,8 +54,8 @@ export async function POST(request: NextRequest) {
       }, { status: 403 });
     }
 
-    // Check if onboarding is required
-    const needsOnboarding = await tenantNeedsOnboarding(user.tenant_id);
+    // Check if onboarding is required (exclude viewers)
+    const needsOnboarding = user.role !== 'viewer' && await tenantNeedsOnboarding(user.tenant_id);
 
     // Generate JWT with tenant_id, role, password_change_required, and mustCompleteOnboarding flags
     const token = jwt.sign(

@@ -68,8 +68,7 @@ export function middleware(request: NextRequest) {
     if (payload.mustCompleteOnboarding) {
       const isAllowedRoute =
         pathname === '/onboarding' ||
-        pathname === '/api/auth/onboarding' ||
-        pathname.startsWith('/api/auth/');
+        pathname === '/api/auth/onboarding';
 
       if (!isAllowedRoute) {
         if (pathname.startsWith('/api/')) {
