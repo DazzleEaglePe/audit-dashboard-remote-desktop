@@ -64,6 +64,21 @@ export function middleware(request: NextRequest) {
       }
     }
 
+    // Force alert-email onboarding if required
+    if (payload.mustCompleteOnboarding) {
+      const isAllowedRoute =
+        pathname === '/onboarding' ||
+        pathname === '/api/auth/onboarding' ||
+        pathname.startsWith('/api/auth/');
+
+      if (!isAllowedRoute) {
+        if (pathname.startsWith('/api/')) {
+          return NextResponse.json({ error: 'Onboarding required' }, { status: 403 });
+        }
+        return NextResponse.redirect(new URL('/onboarding', request.url));
+      }
+    }
+
     return NextResponse.next();
   } catch {
     // Token expired or invalid

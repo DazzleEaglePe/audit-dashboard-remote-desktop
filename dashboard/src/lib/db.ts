@@ -959,3 +959,12 @@ export async function revokeEnrollmentToken(
   }
 }
 
+export async function tenantNeedsOnboarding(tenantId: string): Promise<boolean> {
+  const db = getDrizzleDb();
+  const rows = await db.select({ emails: schema.tenant_settings.alert_emails })
+    .from(schema.tenant_settings)
+    .where(eq(schema.tenant_settings.tenant_id, tenantId));
+  const emails = rows[0]?.emails?.trim();
+  return !emails;
+}
+

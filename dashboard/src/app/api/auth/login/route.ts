@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { getDrizzleDb } from '@/lib/db';
+import { getDrizzleDb, tenantNeedsOnboarding } from '@/lib/db';
 import { users as usersTable, tenants as tenantsTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { JWT_SECRET } from '@/lib/auth-config';
@@ -54,13 +54,17 @@ export async function POST(request: NextRequest) {
       }, { status: 403 });
     }
 
-    // Generate JWT with tenant_id, role and password_change_required flag
+    // Check if onboarding is required
+    const needsOnboarding = await tenantNeedsOnboarding(user.tenant_id);
+
+    // Generate JWT with tenant_id, role, password_change_required, and mustCompleteOnboarding flags
     const token = jwt.sign(
       { 
         username: user.username, 
         role: user.role, 
         tenantId: user.tenant_id,
-        mustChangePassword: user.password_change_required === 1
+        mustChangePassword: user.password_change_required === 1,
+        mustCompleteOnboarding: needsOnboarding
       }, 
       JWT_SECRET, 
       {
@@ -72,6 +76,7 @@ export async function POST(request: NextRequest) {
       status: 'ok',
       username: user.username,
       mustChangePassword: user.password_change_required === 1,
+      mustCompleteOnboarding: needsOnboarding,
     });
 
     // Set HTTP-only cookie

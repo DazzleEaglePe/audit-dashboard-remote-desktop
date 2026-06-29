@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { getDrizzleDb } from '@/lib/db';
+import { getDrizzleDb, tenantNeedsOnboarding } from '@/lib/db';
 import { users as usersTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { JWT_SECRET } from '@/lib/auth-config';
@@ -97,13 +97,17 @@ export async function POST(request: NextRequest) {
       })
       .where(eq(usersTable.id, user.id));
 
+    // Check if onboarding is required
+    const needsOnboarding = await tenantNeedsOnboarding(user.tenant_id);
+
     // Log the user in by generating a JWT
     const jwtToken = jwt.sign(
       { 
         username: user.username, 
         role: user.role, 
         tenantId: user.tenant_id,
-        mustChangePassword: false
+        mustChangePassword: false,
+        mustCompleteOnboarding: needsOnboarding
       }, 
       JWT_SECRET, 
       {
@@ -115,6 +119,7 @@ export async function POST(request: NextRequest) {
       status: 'ok',
       username: user.username,
       tenantId: user.tenant_id,
+      mustCompleteOnboarding: needsOnboarding,
     });
 
     // Set cookie
