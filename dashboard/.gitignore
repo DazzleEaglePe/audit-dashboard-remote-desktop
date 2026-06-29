@@ -56,8 +56,5 @@ src/**/*.js
 /public/*.msi
 
 # Temporary E2E validation scripts & logs
-/scratch/clean_db.js
-/scratch/seed_smoke_keys.js
-/scratch/seed_e2e_tenants.js
-/scratch/e2e-auto-validation.ps1
+/scratch/
 /*.log
