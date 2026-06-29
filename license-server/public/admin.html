@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ECA · Panel de Licencias</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1000px; margin: 2rem auto; padding: 0 1rem; background:#0f172a; color:#e2e8f0; }
+    h1 { font-size: 1.4rem; } h2 { font-size: 1.1rem; margin-top: 2rem; }
+    input, select, button { padding:.5rem; border-radius:6px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; margin:.2rem 0; }
+    button { cursor:pointer; background:#2563eb; border:none; }
+    button.danger { background:#dc2626; } button.warn { background:#d97706; }
+    table { width:100%; border-collapse:collapse; margin-top:1rem; font-size:.85rem; }
+    th,td { border:1px solid #334155; padding:.4rem .6rem; text-align:left; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:.5rem; }
+    .token-bar { background:#1e293b; padding:1rem; border-radius:8px; margin-bottom:1rem; }
+    code { background:#020617; padding:.1rem .3rem; border-radius:4px; }
+  </style>
+</head>
+<body>
+  <h1>🔑 Panel de Licencias — ECA</h1>
+
+  <div class="token-bar">
+    <label>Admin API Token: </label>
+    <input type="password" id="token" placeholder="Bearer token…" style="width:60%" />
+    <button onclick="saveToken()">Guardar</button>
+    <span id="tokenStatus"></span>
+  </div>
+
+  <h2>➕ Crear clave de activación</h2>
+  <div class="grid">
+    <input id="customerName" placeholder="Nombre del cliente" />
+    <input id="maxServers" type="number" placeholder="Máx. servidores" />
+    <input id="plan" placeholder="Plan (standard…)" />
+    <input id="features" placeholder="features (alerts,logs)" />
+    <input id="expiresDays" type="number" placeholder="Días vigencia (365)" />
+    <input id="maxActivations" type="number" placeholder="Máx. activaciones (1)" />
+  </div>
+  <button onclick="createKey()">Generar clave</button>
+  <div id="createResult"></div>
+
+  <h2>📋 Claves emitidas <button onclick="loadKeys()">↻ Refrescar</button></h2>
+  <table id="keysTable">
+    <thead><tr><th>Clave</th><th>Cliente</th><th>Servidores</th><th>Plan</th><th>Estado</th><th>Activaciones</th><th>Install-ID</th><th>Acciones</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+<script>
+  let TOKEN = localStorage.getItem('eca_admin_token') || '';
+  document.getElementById('token').value = TOKEN;
+  function saveToken() {
+    TOKEN = document.getElementById('token').value.trim();
+    localStorage.setItem('eca_admin_token', TOKEN);
+    document.getElementById('tokenStatus').textContent = ' ✅ guardado';
+    loadKeys();
+  }
+  function headers() { return { 'Content-Type':'application/json', 'Authorization':'Bearer '+TOKEN }; }
+
+  async function createKey() {
+    const body = {
+      customerName: document.getElementById('customerName').value,
+      maxServers: document.getElementById('maxServers').value,
+      plan: document.getElementById('plan').value || 'standard',
+      features: document.getElementById('features').value,
+      expiresDays: document.getElementById('expiresDays').value || 365,
+      maxActivations: document.getElementById('maxActivations').value || 1,
+    };
+    const res = await fetch('/api/admin/keys', { method:'POST', headers:headers(), body:JSON.stringify(body) });
+    const data = await res.json();
+    document.getElementById('createResult').innerHTML = res.ok
+      ? `✅ Clave creada: <code>${data.key}</code>`
+      : `❌ ${data.error}`;
+    if (res.ok) loadKeys();
+  }
+
+  async function loadKeys() {
+    const res = await fetch('/api/admin/keys', { headers:headers() });
+    if (!res.ok) { alert('No autorizado o error. Revisa el token.'); return; }
+    const keys = await res.json();
+    const tbody = document.querySelector('#keysTable tbody');
+    tbody.innerHTML = keys.map(k => `
+      <tr>
+        <td><code>${k.key}</code></td><td>${k.customer_name}</td><td>${k.max_servers}</td>
+        <td>${k.plan}</td><td>${k.status}</td><td>${k.activation_count}/${k.max_activations}</td>
+        <td>${k.used_by_install_id || '—'}</td>
+        <td>
+          <button class="danger" onclick="revoke('${k.key}')">Revocar</button>
+          <button class="warn" onclick="reissue('${k.key}')">Reissue</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  async function revoke(key) {
+    if (!confirm('¿Revocar '+key+'?')) return;
+    const res = await fetch('/api/admin/revoke', { method:'POST', headers:headers(), body:JSON.stringify({ activationKey:key }) });
+    alert(res.ok ? 'Revocada' : 'Error'); loadKeys();
+  }
+  async function reissue(key) {
+    const newInstallId = prompt('Nuevo Install-ID para reemitir:');
+    if (!newInstallId) return;
+    const res = await fetch('/api/admin/reissue', { method:'POST', headers:headers(), body:JSON.stringify({ activationKey:key, newInstallId }) });
+    alert(res.ok ? 'Reemitida' : 'Error'); loadKeys();
+  }
+
+  if (TOKEN) loadKeys();
+</script>
+</body>
+</html>
