@@ -1,0 +1,13 @@
+{
+  "name": "eca-audit-monorepo",
+  "version": "1.0.0",
+  "description": "Monorepo de control de auditoría RDP - ECA Soluciones",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix dashboard && npm install --prefix license-server && npm install --prefix license-admin",
+    "dev": "concurrently \"npm run dev --prefix dashboard\" \"npm run worker:dev --prefix dashboard\" \"npm start --prefix license-server\" \"npm run dev --prefix license-admin\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
