@@ -7,6 +7,7 @@
 export interface Server {
   id: string;
   hostname: string;
+  name: string | null; // Nombre amigable personalizable
   ip_lan: string | null;
   ip_tailscale: string | null;
   cpu_model: string | null;
@@ -55,6 +56,7 @@ export interface ServerMetrics {
 
 export interface Alert {
   id: number;
+  tenant_id?: string;
   server_id: string | null;
   alert_type: 'server_down' | 'session_idle' | 'high_cpu' | 'login_failed' | 'rdp_wrapper_broken';
   severity: 'info' | 'warning' | 'critical';

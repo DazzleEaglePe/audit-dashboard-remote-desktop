@@ -7,6 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Monitor, Shield, Loader2, Heart } from "lucide-react";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -15,39 +22,15 @@ export default function LoginPage() {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [isAppLoading, setIsAppLoading] = useState(true);
+    const [isForgotOpen, setIsForgotOpen] = useState(false);
 
     useEffect(() => {
         const timer = setTimeout(() => setIsAppLoading(false), 1500);
         return () => clearTimeout(timer);
     }, []);
 
-    async function handleForgotPassword() {
-        const Swal = (await import('sweetalert2')).default;
-        const withReactContent = (await import('sweetalert2-react-content')).default;
-        const MySwal = withReactContent(Swal);
-
-        MySwal.fire({
-            html: `
-                <div style="padding: 8px 0;">
-                    <p style="font-size: 15px; font-weight: 500; margin-bottom: 6px;">¿Necesitas ayuda?</p>
-                    <p style="font-size: 13px; opacity: 0.55; line-height: 1.6; margin-bottom: 24px;">Contacta al administrador para restablecer tu acceso.</p>
-                    <div style="display: flex; gap: 8px;">
-                        <a href="https://wa.me/51954153338" target="_blank" style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; font-weight: 500; color: var(--foreground); text-decoration: none; transition: background 0.15s;">WhatsApp</a>
-                        <a href="mailto:brunoty000@gmail.com" style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; font-weight: 500; color: var(--foreground); text-decoration: none; transition: background 0.15s;">Correo</a>
-                    </div>
-                </div>
-            `,
-            showConfirmButton: false,
-            showCloseButton: true,
-            background: 'var(--card)',
-            color: 'var(--foreground)',
-            width: 320,
-            customClass: {
-                popup: 'border border-border rounded-2xl shadow-lg',
-                closeButton: 'text-muted-foreground hover:text-foreground focus:outline-none hover:bg-transparent',
-            },
-            buttonsStyling: false,
-        });
+    function handleForgotPassword() {
+        setIsForgotOpen(true);
     }
 
     async function handleSubmit(e: React.FormEvent) {
@@ -188,6 +171,34 @@ export default function LoginPage() {
                     &copy; {new Date().getFullYear()} ECA Soluciones Empresariales SAC. Todos los derechos reservados.
                 </p>
             </div>
+
+            {/* Dialog para ayuda / recuperar contraseña */}
+            <Dialog open={isForgotOpen} onOpenChange={setIsForgotOpen}>
+                <DialogContent className="max-w-[320px] p-6 rounded-2xl">
+                    <DialogHeader className="text-center space-y-1.5 pb-4">
+                        <DialogTitle className="text-base font-bold">¿Necesitas ayuda?</DialogTitle>
+                        <DialogDescription className="text-xs text-muted-foreground">
+                            Contacta al administrador para restablecer tu acceso.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex gap-2">
+                        <a
+                            href="https://wa.me/51954153338"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 flex items-center justify-center py-2 border border-border rounded-lg text-xs font-semibold hover:bg-accent transition-colors"
+                        >
+                            WhatsApp
+                        </a>
+                        <a
+                            href="mailto:brunoty000@gmail.com"
+                            className="flex-1 flex items-center justify-center py-2 border border-border rounded-lg text-xs font-semibold hover:bg-accent transition-colors"
+                        >
+                            Correo
+                        </a>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

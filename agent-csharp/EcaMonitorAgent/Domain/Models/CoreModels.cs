@@ -23,6 +23,12 @@ public class SessionInfo
 
 public class AgentConfig
 {
+    public static readonly string DefaultConfigPath = System.IO.Path.Combine(
+        System.Environment.GetFolderPath(System.Environment.SpecialFolder.CommonApplicationData),
+        "ECA",
+        "config.json"
+    );
+
     public required string ServerId { get; set; }
     public required string ApiUrl { get; set; }
     public required string ApiKey { get; set; }

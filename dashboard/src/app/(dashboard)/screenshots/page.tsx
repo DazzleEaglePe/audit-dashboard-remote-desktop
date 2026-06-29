@@ -14,33 +14,11 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import type { Session } from "@/types";
-import { io } from "socket.io-client";
+import { getSocket } from "@/lib/socket-client";
+import { useServers } from "@/hooks/use-servers";
 import { cn } from "@/lib/utils";
-import { gsap } from "gsap";
-
-const SERVER_LABELS: Record<string, string> = {
-    srv1: "Servidor 1",
-    srv2: "Servidor 2",
-    srv3: "Servidor 3",
-};
-
-const USER_DIRECTORY: Record<string, string> = {
-    // Servidor 1
-    cont: "Winner Huamantalla",
-    cont1: "Melany Roldan Berrocal",
-    sist: "Gianmarco Hugo Villalva Castillo",
-    sist1: "Luna Esmeralda Giron Subilete",
-    sist4: "Alexander Alania",
-    // Servidor 2
-    sist2: "María Melendez Contreras",
-    sist9: "Edith Cerrón Alvarez",
-    sist10: "Fernanda Rojas",
-    // Servidor 3
-    sist3: "Miluska Alvarez Sandoval",
-    sist6: "Adrian Antonio Zavaleta Ticona",
-    sist7: "Mallury Carrasco Segundo",
-    sist8: "Evelyn Acero Castillo",
-};
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 
 interface ScreenshotItem {
     server_id: string;
@@ -51,6 +29,7 @@ interface ScreenshotItem {
 }
 
 export default function ScreenshotsPage() {
+    const { servers } = useServers();
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotItem | null>(null);
@@ -58,22 +37,26 @@ export default function ScreenshotsPage() {
     const [refreshKey, setRefreshKey] = useState(Date.now());
     const [base64Images, setBase64Images] = useState<Record<string, string>>({});
     const [statusFilter, setStatusFilter] = useState<string>("active");
+    const [socketConnected, setSocketConnected] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        if (!loading && containerRef.current) {
-            const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-            tl.fromTo(containerRef.current.querySelector(".screenshots-header"),
-                { opacity: 0, y: -12 },
-                { opacity: 1, y: 0, duration: 0.6 }
-            )
-            .fromTo(containerRef.current.querySelectorAll(".server-section-anim"),
-                { opacity: 0, y: 15 },
-                { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 },
-                "-=0.4"
-            );
+    useGSAP(() => {
+        if (!loading) {
+            const mm = gsap.matchMedia();
+            mm.add("(prefers-reduced-motion: no-preference)", () => {
+                const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+                tl.fromTo(".screenshots-header",
+                    { opacity: 0, y: -12 },
+                    { opacity: 1, y: 0, duration: 0.6 }
+                )
+                .fromTo(".server-section-anim",
+                    { opacity: 0, y: 15 },
+                    { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 },
+                    "-=0.4"
+                );
+            });
         }
-    }, [loading, sessions.length]);
+    }, { dependencies: [loading, sessions.length], scope: containerRef });
 
     async function fetchSessions() {
         try {
@@ -88,32 +71,52 @@ export default function ScreenshotsPage() {
         }
     }
 
+    // 1. WebSocket connection and message handler
     useEffect(() => {
-        // WebSocket connection for real-time updates
-        const socketIo = io();
+        const socketIo = getSocket();
+        if (socketIo) {
+            setSocketConnected(socketIo.connected);
+            
+            const onConnect = () => setSocketConnected(true);
+            const onDisconnect = () => setSocketConnected(false);
 
-        socketIo.on("connect", () => {
-            console.log("Connected to WebSocket for real-time screenshots (Base64)");
-            // Join all server rooms to receive screenshot broadcasts
-            Object.keys(SERVER_LABELS).forEach((serverId) => {
-                socketIo.emit("join-server", serverId);
+            socketIo.on("connect", onConnect);
+            socketIo.on("disconnect", onDisconnect);
+
+            socketIo.on("screenshot:new", (data) => {
+                const normalizedUser = data.username ? data.username.toLowerCase() : "";
+                const key = `${data.serverId}-${normalizedUser}-${data.sessionId}`;
+
+                if (data.image) {
+                    setBase64Images((prev) => ({ ...prev, [key]: data.image }));
+                }
             });
-        });
 
-        socketIo.on("screenshot:new", (data: { serverId: string; username: string; sessionId: number; image?: string }) => {
-            const normalizedUser = data.username ? data.username.toLowerCase() : "";
-            const key = `${data.serverId}-${normalizedUser}-${data.sessionId}`;
-
-            if (data.image) {
-                // Update state with the full Base64 image
-                setBase64Images((prev) => ({ ...prev, [key]: data.image as string }));
-            }
-        });
-
-        return () => {
-            socketIo.disconnect();
-        };
+            return () => {
+                socketIo.off("connect", onConnect);
+                socketIo.off("disconnect", onDisconnect);
+                socketIo.off("screenshot:new");
+            };
+        }
     }, []);
+
+    // 2. Room subscription based on servers loaded and socket connection state
+    useEffect(() => {
+        const socketIo = getSocket();
+        if (socketIo && socketConnected && servers.length > 0) {
+            console.log("Connected to WebSocket: joining server rooms", servers.map(s => s.id));
+            servers.forEach((server) => {
+                socketIo.emit("join-server", server.id);
+            });
+
+            return () => {
+                console.log("Leaving server rooms", servers.map(s => s.id));
+                servers.forEach((server) => {
+                    socketIo.emit("leave-server", server.id);
+                });
+            };
+        }
+    }, [socketConnected, servers]);
 
     useEffect(() => {
         fetchSessions();
@@ -210,9 +213,9 @@ export default function ScreenshotsPage() {
                             <CardHeader className="py-3 px-5 flex flex-row items-center justify-between border-b border-border/20 bg-primary/5">
                                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                                     <Pin className="w-4 h-4 text-primary fill-primary" />
-                                    Pantalla Fijada: {pinnedScreenshot.full_name || USER_DIRECTORY[pinnedScreenshot.username.toLowerCase()] || pinnedScreenshot.username}
+                                    Pantalla Fijada: {pinnedScreenshot.full_name || pinnedScreenshot.username}
                                     <Badge className="text-[9px] uppercase ml-2 border-none bg-primary/10 text-primary">
-                                        {SERVER_LABELS[pinnedScreenshot.server_id] || pinnedScreenshot.server_id}
+                                        {servers.find(s => s.id === pinnedScreenshot.server_id)?.name || servers.find(s => s.id === pinnedScreenshot.server_id)?.hostname || pinnedScreenshot.server_id}
                                     </Badge>
                                 </CardTitle>
                                 <Button variant="ghost" size="sm" onClick={() => setPinnedScreenshot(null)} className="h-8 hover:bg-red-500/10 hover:text-red-500 rounded-xl text-xs gap-1.5">
@@ -250,7 +253,7 @@ export default function ScreenshotsPage() {
                             <div key={serverId} className="server-section-anim opacity-0 space-y-4">
                                 <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                                     <MonitorSmartphone className="w-4 h-4 text-primary" />
-                                    {(SERVER_LABELS[serverId] || serverId).toUpperCase()}
+                                    {(servers.find(s => s.id === serverId)?.name || servers.find(s => s.id === serverId)?.hostname || serverId).toUpperCase()}
                                     <Badge variant="outline" className="text-[9px] font-bold bg-accent/60 text-foreground border-none rounded-full px-2.5 py-0.5 uppercase tracking-wide">
                                         {serverSessions.length} {serverSessions.length === 1 ? 'Sesión' : 'Sesiones'}
                                     </Badge>
@@ -366,8 +369,8 @@ export default function ScreenshotsPage() {
                                                                 {(session.full_name || session.username).substring(0, 2).toUpperCase()}
                                                             </div>
                                                             <div className="min-w-0">
-                                                                <p className="text-xs font-bold truncate leading-tight text-foreground/90" title={session.full_name || USER_DIRECTORY[session.username.toLowerCase()] || session.username}>
-                                                                    {session.full_name || USER_DIRECTORY[session.username.toLowerCase()] || session.username}
+                                                                <p className="text-xs font-bold truncate leading-tight text-foreground/90" title={session.full_name || session.username}>
+                                                                    {session.full_name || session.username}
                                                                 </p>
                                                                 <p className="text-[10px] text-muted-foreground font-mono mt-1 truncate">
                                                                     {session.username} — ID: {session.session_id}
@@ -410,8 +413,8 @@ export default function ScreenshotsPage() {
                         <DialogTitle className="flex items-center justify-between pe-6 text-sm font-bold">
                             <span className="flex items-center gap-2">
                                 <Camera className="w-4.5 h-4.5 text-primary" />
-                                {selectedScreenshot?.full_name || USER_DIRECTORY[selectedScreenshot?.username?.toLowerCase() || ""] || selectedScreenshot?.username} 
-                                <span className="text-muted-foreground font-normal">({SERVER_LABELS[selectedScreenshot?.server_id || ""] || selectedScreenshot?.server_id})</span>
+                                {selectedScreenshot?.full_name || selectedScreenshot?.username} 
+                                <span className="text-muted-foreground font-normal">({servers.find(s => s.id === selectedScreenshot?.server_id)?.name || servers.find(s => s.id === selectedScreenshot?.server_id)?.hostname || selectedScreenshot?.server_id})</span>
                             </span>
                         </DialogTitle>
                     </DialogHeader>

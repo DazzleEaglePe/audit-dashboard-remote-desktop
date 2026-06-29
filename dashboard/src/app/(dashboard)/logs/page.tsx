@@ -23,8 +23,12 @@ import {
 import { ScrollText, Search, ChevronLeft, ChevronRight, LogIn, LogOut, Clock, Zap } from "lucide-react";
 import type { SessionLog } from "@/types";
 import { useLanguage } from "@/components/language-provider";
+import { Skeleton } from "@/components/ui/skeleton";
 import { parseUtcDate, cn } from "@/lib/utils";
-import { gsap } from "gsap";
+import { useServers } from "@/hooks/use-servers";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+
 
 const EVENT_CONFIG: Record<string, { icon: React.ElementType; color: string }> = {
     connect: { icon: LogIn, color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
@@ -35,6 +39,7 @@ const EVENT_CONFIG: Record<string, { icon: React.ElementType; color: string }> =
 
 export default function LogsPage() {
     const { t } = useLanguage();
+    const { servers } = useServers();
     const [logs, setLogs] = useState<SessionLog[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -44,20 +49,23 @@ export default function LogsPage() {
     const limit = 25;
     const containerRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        if (!loading && containerRef.current) {
-            const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-            tl.fromTo(containerRef.current.querySelector(".logs-header"),
-                { opacity: 0, y: -12 },
-                { opacity: 1, y: 0, duration: 0.6 }
-            )
-            .fromTo(containerRef.current.querySelectorAll(".logs-anim-element"),
-                { opacity: 0, y: 15 },
-                { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 },
-                "-=0.45"
-            );
+    useGSAP(() => {
+        if (!loading) {
+            const mm = gsap.matchMedia();
+            mm.add("(prefers-reduced-motion: no-preference)", () => {
+                const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+                tl.fromTo(".logs-header",
+                    { opacity: 0, y: -12 },
+                    { opacity: 1, y: 0, duration: 0.6 }
+                )
+                .fromTo(".logs-anim-element",
+                    { opacity: 0, y: 15 },
+                    { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 },
+                    "-=0.45"
+                );
+            });
         }
-    }, [loading]);
+    }, { dependencies: [loading], scope: containerRef });
 
     async function fetchLogs() {
         try {
@@ -123,9 +131,11 @@ export default function LogsPage() {
                             </SelectTrigger>
                             <SelectContent className="rounded-xl border-border/20 backdrop-blur-md">
                                 <SelectItem value="all" className="rounded-lg">{t("logs.filterAll")}</SelectItem>
-                                <SelectItem value="srv1" className="rounded-lg">{t("logs.server1")}</SelectItem>
-                                <SelectItem value="srv2" className="rounded-lg">{t("logs.server2")}</SelectItem>
-                                <SelectItem value="srv3" className="rounded-lg">{t("logs.server3")}</SelectItem>
+                                {servers.map((s) => (
+                                    <SelectItem key={s.id} value={s.id} className="rounded-lg">
+                                        {s.name || s.hostname || s.id}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                         <Button type="submit" variant="secondary" className="rounded-xl h-9 hover:bg-accent/40 font-medium text-xs gap-1.5 shrink-0">
@@ -149,9 +159,15 @@ export default function LogsPage() {
                 </CardHeader>
                 <CardContent className="p-0">
                     {loading ? (
-                        <div className="p-6 space-y-3">
+                        <div className="p-6 space-y-4">
                             {[1, 2, 3, 4, 5].map((i) => (
-                                <div key={i} className="h-10 bg-accent/40 rounded-xl animate-pulse" />
+                                <div key={i} className="flex items-center gap-4 animate-pulse">
+                                    <Skeleton className="h-4 w-28 bg-accent/60 rounded" />
+                                    <Skeleton className="h-4 w-20 bg-accent/50 rounded" />
+                                    <Skeleton className="h-4 w-24 bg-accent/40 rounded" />
+                                    <Skeleton className="h-4 w-32 bg-accent/50 rounded flex-1" />
+                                    <Skeleton className="h-4 w-16 bg-accent/40 rounded" />
+                                </div>
                             ))}
                         </div>
                     ) : logs.length === 0 ? (
@@ -207,7 +223,7 @@ export default function LogsPage() {
                                                     </TableCell>
                                                     <TableCell className="py-3">
                                                         <Badge variant="outline" className="font-mono text-[9px] bg-accent/30 text-muted-foreground border-border/10 rounded-lg px-2 py-0.5">
-                                                            {log.server_id.toUpperCase()}
+                                                            {servers.find(s => s.id === log.server_id)?.name || servers.find(s => s.id === log.server_id)?.hostname || log.server_id}
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell className="font-mono text-xs py-3">

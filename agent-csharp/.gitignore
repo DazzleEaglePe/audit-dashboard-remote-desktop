@@ -4,3 +4,15 @@ obj/
 *.dll
 *.pdb
 *.user
+
+# WiX setup artifacts
+EcaAgentSetup/*.msi
+EcaAgentSetup/*.wixpdb
+EcaAgentSetup/Files.wxs
+EcaAgentSetup/*.cab
+publish/
+
+# Signature artifacts
+*.pfx
+*.cer
+*.snk

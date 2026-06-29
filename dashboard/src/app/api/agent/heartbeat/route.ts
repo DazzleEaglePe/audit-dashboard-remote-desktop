@@ -8,30 +8,48 @@ import {
 import {
   upsertSessions,
   insertServerMetrics,
-  checkServerTimeouts,
   insertAlert,
-  cleanOldMetrics,
-  cleanOldLogs,
+  verifyAndRegisterServer,
 } from '@/lib/db';
 import type { AgentHeartbeatPayload } from '@/types';
+import { notifyServerUpdate } from '@/lib/socket';
 
 // ═══════════════════════════════════════════════════════
 // POST /api/agent/heartbeat
-// Receives metrics + sessions from PowerShell agents
+// Receives metrics + sessions from agents
 // ═══════════════════════════════════════════════════════
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate API key
-    if (!validateApiKey(request)) {
-      return unauthorizedResponse('Invalid API key');
-    }
-
     const body = (await request.json()) as AgentHeartbeatPayload;
 
     // Validate required fields
     if (!body.server_id || !body.metrics) {
       return errorResponse('Missing required fields: server_id, metrics', 400);
+    }
+
+    // Validate API key dynamically and resolve tenantId, enforcing device binding
+    const auth = await validateApiKey(request, body.server_id);
+    if (!auth.valid || !auth.tenantId) {
+      return unauthorizedResponse('Invalid API key');
+    }
+    const tenantId = auth.tenantId;
+
+    if (auth.deviceId && auth.deviceId !== body.server_id) {
+      return unauthorizedResponse('La API key no corresponde a este equipo');
+    }
+
+    // Verify server ownership / auto-register under this tenant
+    const verified = await verifyAndRegisterServer(
+      body.server_id,
+      tenantId,
+      body.hostname,
+      body.metrics.ram_total_mb ? Math.round(body.metrics.ram_total_mb / 1024) : undefined,
+      undefined
+    );
+
+    if (!verified) {
+      return errorResponse('Forbidden: Server belongs to another tenant', 403);
     }
 
     // PowerShell's ConvertTo-Json serializes single-element arrays as plain objects {},
@@ -47,10 +65,10 @@ export async function POST(request: NextRequest) {
     }));
 
     // Update sessions
-    upsertSessions(body.server_id, normalizedSessions);
+    await upsertSessions(body.server_id, normalizedSessions);
 
     // Store metrics
-    insertServerMetrics(
+    await insertServerMetrics(
       body.server_id,
       body.metrics,
       normalizedSessions.filter((s) => s.state === 'Active').length
@@ -58,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     // Check for alerts: high CPU
     if (body.metrics.cpu_percent > 90) {
-      insertAlert({
+      await insertAlert({
         server_id: body.server_id,
         alert_type: 'high_cpu',
         severity: 'warning',
@@ -66,37 +84,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check for stale servers (mark as offline if no heartbeat in 2 min)
-    const staleServers = checkServerTimeouts(2);
-    for (const serverId of staleServers) {
-      insertAlert({
-        server_id: serverId,
-        alert_type: 'server_down',
-        severity: 'critical',
-        message: `Servidor ${serverId} sin respuesta (sin heartbeat por >2 min)`,
-      });
-    }
+    // Note: Stale servers check and data retention cleanups have been moved to server.ts background workers
 
-    // Run data retention cleanups
-    try {
-      const metricsRetentionDays = process.env.RETENTION_METRICS_DAYS ? parseInt(process.env.RETENTION_METRICS_DAYS, 10) : 7;
-      const logsRetentionDays = process.env.RETENTION_LOGS_DAYS ? parseInt(process.env.RETENTION_LOGS_DAYS, 10) : 90;
-      cleanOldMetrics(metricsRetentionDays);
-      cleanOldLogs(logsRetentionDays);
-    } catch (cleanupError) {
-      console.error('Error during data retention cleanup:', cleanupError);
-    }
-
-    // Emit WebSocket event (will be handled by custom server)
-    // For now, store in a global variable that the WS server can poll
-    if (typeof globalThis !== 'undefined') {
-      (globalThis as Record<string, unknown>).__lastHeartbeat = {
-        server_id: body.server_id,
-        timestamp: new Date().toISOString(),
-        metrics: body.metrics,
-        sessions: normalizedSessions,
-      };
-    }
+    // Emit WebSocket event
+    notifyServerUpdate(tenantId, body.server_id, {
+      metrics: body.metrics,
+      sessions: normalizedSessions,
+    });
 
     return successResponse({
       status: 'ok',
@@ -108,3 +102,4 @@ export async function POST(request: NextRequest) {
     return errorResponse('Internal server error');
   }
 }
+

@@ -11,30 +11,30 @@ export const getIO = (): ServerIO | null => {
 };
 
 // Helper methods to emit events from API Routes
-export const notifyServerUpdate = (serverId: string, data: any) => {
+export const notifyServerUpdate = (tenantId: string, serverId: string, data: any) => {
   const io = getIO();
   if (io) {
-    io.emit("server:update", { serverId, data });
+    io.to(`server:${tenantId}:${serverId}`).emit("server:update", { serverId, data });
   }
 };
 
-export const notifyAlert = (alert: any) => {
+export const notifyAlert = (tenantId: string, alert: any) => {
   const io = getIO();
   if (io) {
-    io.emit("alert:new", alert);
+    io.to(`tenant:${tenantId}`).emit("alert:new", alert);
   }
 };
 
-export const notifyNewScreenshot = (serverId: string, username: string, sessionId: number, base64Image: string) => {
+export const notifyNewScreenshot = (tenantId: string, serverId: string, username: string, sessionId: number, base64Image: string) => {
   const io = getIO();
   if (io) {
-    io.to(`server:${serverId}`).emit("screenshot:new", { serverId, username, sessionId, image: base64Image });
+    io.to(`server:${tenantId}:${serverId}`).emit("screenshot:new", { serverId, username, sessionId, image: base64Image });
   }
 };
 
-export const notifySessionUpdate = (session: any) => {
+export const notifySessionUpdate = (tenantId: string, serverId: string, session: any) => {
   const io = getIO();
   if (io) {
-    io.emit("session:update", session);
+    io.to(`server:${tenantId}:${serverId}`).emit("session:update", session);
   }
 };

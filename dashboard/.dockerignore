@@ -1,0 +1,16 @@
+node_modules
+.next
+data/
+.env*
+scratch/
+*.log
+.git
+.vscode
+out/
+build/
+tsconfig.tsbuildinfo
+Dockerfile
+docker-compose.yml
+nginx.conf
+scripts/
+*.pem

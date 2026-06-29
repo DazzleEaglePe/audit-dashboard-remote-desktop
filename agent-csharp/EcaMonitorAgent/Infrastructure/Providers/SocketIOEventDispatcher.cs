@@ -45,6 +45,11 @@ public class SocketIOEventDispatcher : IEventDispatcher
     {
         try
         {
+            if (_client.Options != null && _client.Options.Query != null)
+            {
+                _client.Options.Query["api_key"] = _config.ApiKey;
+                _client.Options.Query["server_id"] = _config.ServerId;
+            }
             await _client.ConnectAsync();
         }
         catch (Exception ex)
@@ -86,6 +91,10 @@ public class SocketIOEventDispatcher : IEventDispatcher
 
         try
         {
+            // Dynamically set API key header in case it was rotated
+            _httpClient.DefaultRequestHeaders.Remove("x-api-key");
+            _httpClient.DefaultRequestHeaders.Add("x-api-key", _config.ApiKey);
+
             var json = JsonSerializer.Serialize(payload);
             var content = new StringContent(json);
             content.Headers.ContentType = new MediaTypeHeaderValue("application/json");

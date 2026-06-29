@@ -9,6 +9,21 @@ export interface ServerToClientEvents {
         sessionId: number;
         image: string;
     }) => void;
+    "alert:new": (alert: {
+        id: number;
+        tenant_id: string;
+        server_id: string | null;
+        alert_type: string;
+        severity: string;
+        message: string;
+        is_read: number;
+        created_at: Date | string | null;
+    }) => void;
+    "server:update": (data: {
+        serverId: string;
+        data: any;
+    }) => void;
+    "session:update": (session: any) => void;
 }
 
 export interface ClientToServerEvents {
@@ -31,6 +46,8 @@ export interface SocketData {
     user?: {
         username: string;
         role?: string;
+        tenantId?: string;
     };
     isAgent?: boolean;
+    tenantId?: string;
 }

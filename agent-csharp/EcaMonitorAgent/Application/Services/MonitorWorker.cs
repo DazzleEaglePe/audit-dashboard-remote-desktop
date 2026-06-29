@@ -2,6 +2,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using EcaMonitorAgent.Domain.Interfaces;
 using EcaMonitorAgent.Domain.Models;
+using EcaMonitorAgent.Infrastructure.Providers;
 
 namespace EcaMonitorAgent.Application.Services;
 
@@ -13,6 +14,8 @@ public class MonitorWorker : BackgroundService
     private readonly IScreenCaptureEngine _captureEngine;
     private readonly IEventDispatcher _eventDispatcher;
     private readonly AgentConfig _config;
+    private readonly EnrollmentManager _enrollmentManager;
+    private readonly IHostApplicationLifetime _appLifetime;
 
     public MonitorWorker(
         ILogger<MonitorWorker> logger,
@@ -20,7 +23,9 @@ public class MonitorWorker : BackgroundService
         IMetricsRecorder metricsRecorder,
         IScreenCaptureEngine captureEngine,
         IEventDispatcher eventDispatcher,
-        AgentConfig config)
+        AgentConfig config,
+        EnrollmentManager enrollmentManager,
+        IHostApplicationLifetime appLifetime)
     {
         _logger = logger;
         _sessionProvider = sessionProvider;
@@ -28,6 +33,8 @@ public class MonitorWorker : BackgroundService
         _captureEngine = captureEngine;
         _eventDispatcher = eventDispatcher;
         _config = config;
+        _enrollmentManager = enrollmentManager;
+        _appLifetime = appLifetime;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -56,6 +63,30 @@ public class MonitorWorker : BackgroundService
 
                 await _eventDispatcher.SendHeartbeatAsync(metrics, sessions);
                 _logger.LogDebug("Heartbeat sent successfully.");
+            }
+            catch (System.Net.Http.HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                _logger.LogError("La clave de API ha sido rechazada por el servidor (401 Unauthorized). La clave podría estar revocada.");
+                
+                try
+                {
+                    _logger.LogInformation("Intentando re-enrolamiento automático con config.json...");
+                    var rotatedKey = await _enrollmentManager.PerformEnrollmentAsync(AgentConfig.DefaultConfigPath);
+                    if (!string.IsNullOrEmpty(rotatedKey))
+                    {
+                        _config.ApiKey = rotatedKey;
+                        _logger.LogInformation("Re-enrolamiento exitoso. Nueva clave de API cargada.");
+                        continue;
+                    }
+                }
+                catch (Exception enrollEx)
+                {
+                    _logger.LogError(enrollEx, "Error durante el intento de re-enrolamiento.");
+                }
+
+                _logger.LogCritical("No se pudo re-enrolar. Deteniendo el bucle de heartbeat y finalizando el agente...");
+                _appLifetime.StopApplication();
+                break;
             }
             catch (Exception ex)
             {

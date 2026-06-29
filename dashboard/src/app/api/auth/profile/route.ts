@@ -3,80 +3,44 @@ import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
-
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'fallback-secret-change-me';
-
-interface UserCredential {
-  username: string;
-  passwordHash: string;
-  fullName?: string;
-  avatarUrl?: string;
-}
-
-function getCredentialsPath() {
-  return path.join(process.cwd(), 'data', 'credentials.json');
-}
-
-function readCredentials(): { users: UserCredential[] } {
-  const credPath = getCredentialsPath();
-  if (fs.existsSync(credPath)) {
-    try {
-      return JSON.parse(fs.readFileSync(credPath, 'utf-8'));
-    } catch (e) {
-      console.error('Error reading credentials file:', e);
-    }
-  }
-  return { users: [] };
-}
-
-function writeCredentials(data: { users: UserCredential[] }) {
-  const credPath = getCredentialsPath();
-  const dir = path.dirname(credPath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  fs.writeFileSync(credPath, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-// Helper to authenticate request using JWT cookie
-function getAuthenticatedUser(request: NextRequest): { username: string } | null {
-  try {
-    const token = request.cookies.get('auth-token')?.value;
-    if (!token) return null;
-    
-    const decoded = jwt.verify(token, JWT_SECRET) as { username: string };
-    return decoded;
-  } catch (error) {
-    console.error('JWT verification failed:', error);
-    return null;
-  }
-}
+import crypto from 'crypto';
+import { getDrizzleDb } from '@/lib/db';
+import { users as usersTable } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
+import { getAuthenticatedSession } from '@/lib/api-middleware';
+import { JWT_SECRET } from '@/lib/auth-config';
 
 // GET /api/auth/profile — Get authenticated user details
 export async function GET(request: NextRequest) {
-  const user = getAuthenticatedUser(request);
-  if (!user) {
+  const auth = getAuthenticatedSession(request);
+  if (!auth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const credentials = readCredentials();
-  const currentUser = credentials.users.find(u => u.username === user.username);
+  const db = getDrizzleDb();
+  const userList = await db.select()
+    .from(usersTable)
+    .where(and(
+      eq(usersTable.username, auth.username),
+      eq(usersTable.tenant_id, auth.tenantId)
+    ));
+  const user = userList[0];
 
-  if (!currentUser) {
+  if (!user) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
   return NextResponse.json({
-    username: currentUser.username,
-    fullName: currentUser.fullName || 'Administrador',
-    avatarUrl: currentUser.avatarUrl || '',
+    username: user.username,
+    fullName: user.full_name || 'Administrador',
+    avatarUrl: user.avatar_url || '',
   });
 }
 
 // PUT /api/auth/profile — Update authenticated user details
 export async function PUT(request: NextRequest) {
-  const user = getAuthenticatedUser(request);
-  if (!user) {
+  const auth = getAuthenticatedSession(request);
+  if (!auth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -84,23 +48,36 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { fullName, newPassword, avatarData } = body;
 
-    const credentials = readCredentials();
-    const userIndex = credentials.users.findIndex(u => u.username === user.username);
+    const db = getDrizzleDb();
+    const userList = await db.select()
+      .from(usersTable)
+      .where(and(
+        eq(usersTable.username, auth.username),
+        eq(usersTable.tenant_id, auth.tenantId)
+      ));
+    const user = userList[0];
 
-    if (userIndex === -1) {
+    if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const currentUser = credentials.users[userIndex];
-    let updatedAvatarUrl = currentUser.avatarUrl || '';
+    let updatedAvatarUrl = user.avatar_url || '';
 
     // 1. Process base64 avatar if provided
-    if (avatarData && avatarData.startsWith('data:image/')) {
-      const match = avatarData.match(/^data:image\/([a-zA-Z+]+);base64,(.+)$/);
+    if (avatarData) {
+      if (!avatarData.startsWith('data:image/png;base64,') && !avatarData.startsWith('data:image/jpeg;base64,')) {
+        return NextResponse.json({ error: 'Avatar must be a base64 encoded PNG or JPEG image' }, { status: 400 });
+      }
+
+      const match = avatarData.match(/^data:image\/(png|jpeg);base64,(.+)$/);
       if (match) {
         const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
         const base64Str = match[2];
         const buffer = Buffer.from(base64Str, 'base64');
+
+        if (buffer.length > 2 * 1024 * 1024) {
+          return NextResponse.json({ error: 'Avatar size cannot exceed 2MB' }, { status: 400 });
+        }
 
         const publicDir = path.join(process.cwd(), 'public');
         const avatarsDir = path.join(publicDir, 'avatars');
@@ -108,7 +85,7 @@ export async function PUT(request: NextRequest) {
           fs.mkdirSync(avatarsDir, { recursive: true });
         }
 
-        const avatarFileName = `${user.username}-avatar.${ext}`;
+        const avatarFileName = `${crypto.createHash('md5').update(auth.username).digest('hex')}.${ext}`;
         const avatarPath = path.join(avatarsDir, avatarFileName);
         
         fs.writeFileSync(avatarPath, buffer);
@@ -116,27 +93,63 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    const updates: Partial<typeof usersTable.$inferInsert> = {
+      avatar_url: updatedAvatarUrl,
+    };
+
     // 2. Process password change if provided
     if (newPassword && newPassword.trim().length > 0) {
-      const defaultHash = bcryptjs.hashSync(newPassword, 10);
-      currentUser.passwordHash = defaultHash;
+      if (newPassword.length < 6) {
+        return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 });
+      }
+      const hash = bcryptjs.hashSync(newPassword, 10);
+      updates.password_hash = hash;
+      updates.password_change_required = 0; // Clear the temporary password flag
     }
 
     // 3. Update full name
     if (fullName !== undefined) {
-      currentUser.fullName = fullName;
+      updates.full_name = fullName;
     }
 
-    currentUser.avatarUrl = updatedAvatarUrl;
+    await db.update(usersTable)
+      .set(updates)
+      .where(and(
+        eq(usersTable.username, auth.username),
+        eq(usersTable.tenant_id, auth.tenantId)
+      ));
 
-    // Save changes
-    writeCredentials(credentials);
-
-    return NextResponse.json({
+    const response = NextResponse.json({
       status: 'ok',
-      fullName: currentUser.fullName,
-      avatarUrl: currentUser.avatarUrl,
+      fullName: updates.full_name || user.full_name,
+      avatarUrl: updatedAvatarUrl,
     });
+
+    // Re-issue JWT cookie if password was updated, clearing the mustChangePassword state
+    if (newPassword && newPassword.trim().length > 0) {
+      const token = jwt.sign(
+        { 
+          username: user.username, 
+          role: user.role, 
+          tenantId: user.tenant_id,
+          mustChangePassword: false
+        }, 
+        JWT_SECRET, 
+        {
+          expiresIn: '24h',
+        }
+      );
+
+      response.cookies.set('auth-token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24, // 24 hours
+        path: '/',
+      });
+    }
+
+    return response;
   } catch (error) {
     console.error('Failed to update profile:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

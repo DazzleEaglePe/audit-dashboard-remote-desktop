@@ -1,13 +1,18 @@
-import { successResponse, errorResponse } from '@/lib/api-middleware';
+import { NextRequest } from 'next/server';
+import { successResponse, errorResponse, getTenantId } from '@/lib/api-middleware';
 import { getDashboardStats } from '@/lib/db';
 
 // ═══════════════════════════════════════════════════════
 // GET /api/stats — Dashboard summary statistics
 // ═══════════════════════════════════════════════════════
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const stats = getDashboardStats();
+    const tenantId = getTenantId(request);
+    if (!tenantId) {
+      return errorResponse('Unauthorized', 401);
+    }
+    const stats = await getDashboardStats(tenantId);
     return successResponse(stats);
   } catch (error) {
     console.error('Stats API error:', error);

@@ -1,11 +1,20 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { getLicenseState } from "@/lib/license";
+import { redirect } from "next/navigation";
 
-export default function DashboardLayout({
+export const dynamic = "force-dynamic";
+
+export default async function DashboardLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    const lic = await getLicenseState();
+    if (!lic.valid) {
+        redirect("/license");
+    }
+
     return (
         <div className="min-h-screen bg-background flex">
             <Sidebar />

@@ -20,6 +20,7 @@
 # production
 /build
 /server.js
+/worker.js
 
 # misc
 .DS_Store
@@ -43,3 +44,20 @@ next-env.d.ts
 
 # local data (database and credentials)
 data/  
+
+# Compiled TS files
+src/**/*.js
+
+# docker local override
+/docker-compose.override.yml
+
+# MSI installers
+/private/*.msi
+/public/*.msi
+
+# Temporary E2E validation scripts & logs
+/scratch/clean_db.js
+/scratch/seed_smoke_keys.js
+/scratch/seed_e2e_tenants.js
+/scratch/e2e-auto-validation.ps1
+/*.log

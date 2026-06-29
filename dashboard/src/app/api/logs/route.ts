@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { successResponse, errorResponse } from '@/lib/api-middleware';
+import { successResponse, errorResponse, getTenantId } from '@/lib/api-middleware';
 import { getSessionLogs } from '@/lib/db';
 
 // ═══════════════════════════════════════════════════════
@@ -8,6 +8,11 @@ import { getSessionLogs } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
+    const tenantId = getTenantId(request);
+    if (!tenantId) {
+      return errorResponse('Unauthorized', 401);
+    }
+
     const { searchParams } = new URL(request.url);
 
     const filters = {
@@ -19,7 +24,7 @@ export async function GET(request: NextRequest) {
       offset: parseInt(searchParams.get('offset') || '0'),
     };
 
-    const { logs, total } = getSessionLogs(filters);
+    const { logs, total } = await getSessionLogs(filters, tenantId);
 
     return successResponse({
       logs,

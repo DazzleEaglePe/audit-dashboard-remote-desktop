@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { successResponse, errorResponse } from '@/lib/api-middleware';
+import { successResponse, errorResponse, getTenantId } from '@/lib/api-middleware';
 import { getAlerts, markAlertRead } from '@/lib/db';
 
 // ═══════════════════════════════════════════════════════
@@ -9,10 +9,14 @@ import { getAlerts, markAlertRead } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
+    const tenantId = getTenantId(request);
+    if (!tenantId) {
+      return errorResponse('Unauthorized', 401);
+    }
     const { searchParams } = new URL(request.url);
     const unreadOnly = searchParams.get('unread') === 'true';
 
-    const alerts = getAlerts(unreadOnly);
+    const alerts = await getAlerts(unreadOnly, tenantId);
     return successResponse(alerts);
   } catch (error) {
     console.error('Alerts API error:', error);
@@ -22,6 +26,10 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const tenantId = getTenantId(request);
+    if (!tenantId) {
+      return errorResponse('Unauthorized', 401);
+    }
     const body = await request.json();
     const { id } = body;
 
@@ -29,7 +37,7 @@ export async function PUT(request: NextRequest) {
       return errorResponse('Missing alert id', 400);
     }
 
-    markAlertRead(id);
+    await markAlertRead(id, tenantId);
     return successResponse({ status: 'ok', id });
   } catch (error) {
     console.error('Alert update error:', error);

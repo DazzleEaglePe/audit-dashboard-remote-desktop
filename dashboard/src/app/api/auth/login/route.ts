@@ -1,92 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import fs from 'fs';
-import path from 'path';
+import { getDrizzleDb } from '@/lib/db';
+import { users as usersTable, tenants as tenantsTable } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { JWT_SECRET } from '@/lib/auth-config';
+import { rateLimit } from '@/lib/rate-limiter';
 
-// ═══════════════════════════════════════════════════════
-// POST /api/auth/login — Simple JWT authentication
-// Uses credentials.json file to avoid env variable issues with bcrypt $ chars
-// ═══════════════════════════════════════════════════════
-
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'fallback-secret-change-me';
 const TOKEN_EXPIRY = '24h';
-
-interface UserCredential {
-  username: string;
-  passwordHash: string;
-}
-
-function getAdminUsers(): UserCredential[] {
-  const credPath = path.join(process.cwd(), 'data', 'credentials.json');
-
-  if (fs.existsSync(credPath)) {
-    try {
-      const data = JSON.parse(fs.readFileSync(credPath, 'utf-8'));
-      return data.users || [];
-    } catch (e) {
-      console.error('Error reading credentials file:', e);
-    }
-  }
-
-  return [];
-}
-
-// Auto-create credentials file with default admin user
-function ensureCredentials(): void {
-  const dataDir = path.join(process.cwd(), 'data');
-  const credPath = path.join(dataDir, 'credentials.json');
-
-  if (!fs.existsSync(credPath)) {
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-
-    // Default admin user: admin / admin123
-    const defaultHash = bcryptjs.hashSync('admin123', 10);
-    const credentials = {
-      users: [{ username: 'admin', passwordHash: defaultHash }],
-    };
-
-    fs.writeFileSync(credPath, JSON.stringify(credentials, null, 2));
-    console.log('Created default credentials file with admin/admin123');
-  }
-}
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || 'unknown-ip';
+    
+    // Check rate limit: 5 requests per minute per IP
+    if (!rateLimit(`login_${ip}`, 5, 60000)) {
+      return NextResponse.json({ error: 'Too many login attempts, please try again later.' }, { status: 429 });
+    }
+
     const { username, password } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json({ error: 'Username and password required' }, { status: 400 });
     }
 
-    ensureCredentials();
+    const db = getDrizzleDb();
 
-    const users = getAdminUsers();
-    const user = users.find((u) => u.username === username);
+    // Query user by username
+    const userList = await db.select()
+      .from(usersTable)
+      .where(eq(usersTable.username, username));
+    const user = userList[0];
 
     if (!user) {
       return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 });
     }
 
-    const valid = await bcryptjs.compare(password, user.passwordHash);
+    const valid = await bcryptjs.compare(password, user.password_hash);
 
     if (!valid) {
       return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 });
     }
 
-    // Generate JWT
-    const token = jwt.sign({ username, role: 'admin' }, JWT_SECRET, {
-      expiresIn: TOKEN_EXPIRY,
+    // Verify tenant status
+    const tenantList = await db.select()
+      .from(tenantsTable)
+      .where(eq(tenantsTable.id, user.tenant_id));
+    const tenant = tenantList[0];
+
+    if (tenant && tenant.status !== 'active') {
+      return NextResponse.json({
+        error: 'La cuenta de tu empresa está inactiva o suspendida. Comunícate con soporte.'
+      }, { status: 403 });
+    }
+
+    // Generate JWT with tenant_id, role and password_change_required flag
+    const token = jwt.sign(
+      { 
+        username: user.username, 
+        role: user.role, 
+        tenantId: user.tenant_id,
+        mustChangePassword: user.password_change_required === 1
+      }, 
+      JWT_SECRET, 
+      {
+        expiresIn: TOKEN_EXPIRY,
+      }
+    );
+
+    const response = NextResponse.json({
+      status: 'ok',
+      username: user.username,
+      mustChangePassword: user.password_change_required === 1,
     });
 
     // Set HTTP-only cookie
-    const response = NextResponse.json({
-      status: 'ok',
-      username,
-    });
-
     response.cookies.set('auth-token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

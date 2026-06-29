@@ -22,7 +22,46 @@ import { Button } from "@/components/ui/button";
 import type { ServerWithMetrics, DashboardStats } from "@/types";
 import { useLanguage } from "@/components/language-provider";
 import { cn } from "@/lib/utils";
-import { gsap } from "gsap";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import { cva } from "class-variance-authority";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getSocket } from "@/lib/socket-client";
+
+// ─── Stat Card Variants (CVA) ───
+const statCardVariants = cva(
+    "glass glass-interactive border transition-all duration-300 rounded-2xl",
+    {
+        variants: {
+            variant: {
+                default: "border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.04)]",
+                success: "border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.04)]",
+                warning: "border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.04)]",
+                destructive: "border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.04)]",
+            },
+        },
+        defaultVariants: {
+            variant: "default",
+        },
+    }
+);
+
+const statIconVariants = cva(
+    "w-12 h-12 rounded-2xl flex items-center justify-center transition-transform duration-300 hover:scale-105 shrink-0",
+    {
+        variants: {
+            variant: {
+                default: "bg-blue-500/10 border border-blue-500/30 text-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.15)]",
+                success: "bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.15)]",
+                warning: "bg-amber-500/10 border border-amber-500/30 text-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.15)]",
+                destructive: "bg-red-500/10 border border-red-500/30 text-red-500 shadow-[0_0_12px_rgba(239,68,68,0.15)]",
+            },
+        },
+        defaultVariants: {
+            variant: "default",
+        },
+    }
+);
 
 // ─── Stat Card Component ───
 function StatCard({
@@ -38,27 +77,13 @@ function StatCard({
     description?: string;
     variant?: "default" | "success" | "warning" | "destructive";
 }) {
-    const borderColors = {
-        default: "border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.04)]",
-        success: "border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.04)]",
-        warning: "border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.04)]",
-        destructive: "border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.04)]",
-    };
-
-    const iconColors = {
-        default: "bg-blue-500/10 border border-blue-500/30 text-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.15)]",
-        success: "bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.15)]",
-        warning: "bg-amber-500/10 border border-amber-500/30 text-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.15)]",
-        destructive: "bg-red-500/10 border border-red-500/30 text-red-500 shadow-[0_0_12px_rgba(239,68,68,0.15)]",
-    };
-
     return (
-        <Card className={cn("glass glass-interactive border transition-all duration-300 rounded-2xl", borderColors[variant])}>
+        <Card className={statCardVariants({ variant })}>
             <CardContent className="p-5 flex flex-row items-center justify-between">
                 <div>
                     <p className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground/85">{title}</p>
                     <div className="flex items-baseline gap-1.5 mt-2.5">
-                        <span className="text-3xl font-extrabold tracking-tight">{value}</span>
+                        <span className="text-3xl font-extrabold tracking-tight tabular-nums">{value}</span>
                         {variant !== "default" && (
                             <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", 
                                 variant === "success" ? "bg-emerald-500" : 
@@ -70,11 +95,46 @@ function StatCard({
                         <p className="text-xs text-muted-foreground/60 mt-1.5 font-medium">{description}</p>
                     )}
                 </div>
-                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-transform duration-300 hover:scale-105 shrink-0", iconColors[variant])}>
-                    <Icon className="w-5.5 h-5.5" />
+                <div className={statIconVariants({ variant })}>
+                    <Icon className="w-5.5 h-5.5" aria-hidden="true" />
                 </div>
             </CardContent>
         </Card>
+    );
+}
+
+// ─── Metrics Tone Helpers ───
+type MetricTone = "ok" | "warn" | "danger" | "info";
+
+function getMetricTone(value: number, warnThreshold: number, dangerThreshold: number): MetricTone {
+    if (value > dangerThreshold) return "danger";
+    if (value > warnThreshold) return "warn";
+    return "ok";
+}
+
+const metricTextClass: Record<MetricTone, string> = {
+    ok: "text-emerald-500",
+    warn: "text-amber-500",
+    danger: "text-red-500",
+    info: "text-primary",
+};
+
+const metricBarClass: Record<MetricTone, string> = {
+    ok: "bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_8px_rgba(16,185,129,0.2)]",
+    warn: "bg-gradient-to-r from-amber-500 to-yellow-400 shadow-[0_0_8px_rgba(245,158,11,0.2)]",
+    danger: "bg-gradient-to-r from-red-500 to-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.25)]",
+    info: "bg-gradient-to-r from-primary to-violet-400 shadow-[0_0_8px_color-mix(in_srgb,var(--primary)_20%,transparent)]",
+};
+
+// ─── Shared Progress Bar Component ───
+function ProgressBar({ value, tone }: { value: number; tone: MetricTone }) {
+    return (
+        <div className="h-2 bg-accent/40 rounded-full overflow-hidden p-[0.5px] border border-border/5">
+            <div
+                className={cn("h-full rounded-full transition-all duration-700 ease-out", metricBarClass[tone])}
+                style={{ width: `${Math.min(value, 100)}%` }}
+            />
+        </div>
     );
 }
 
@@ -88,16 +148,9 @@ function ServerCard({ server }: { server: ServerWithMetrics }) {
         : 0;
     const diskPercent = server.metrics?.disk_percent ?? 0;
 
-    function ProgressBar({ value, color }: { value: number; color: string }) {
-        return (
-            <div className="h-2 bg-accent/40 rounded-full overflow-hidden p-[0.5px] border border-border/5">
-                <div
-                    className={`h-full rounded-full transition-all duration-700 ease-out ${color}`}
-                    style={{ width: `${Math.min(value, 100)}%` }}
-                />
-            </div>
-        );
-    }
+    const cpuTone = getMetricTone(cpuPercent, 60, 80);
+    const ramTone = getMetricTone(ramPercent, 70, 85);
+    const diskTone = getMetricTone(diskPercent, 90, 90);
 
     return (
         <Card className={cn(
@@ -109,19 +162,19 @@ function ServerCard({ server }: { server: ServerWithMetrics }) {
             <CardHeader className="pb-3 pt-4 px-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300", 
-                            isOnline 
-                                ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.15)]" 
+                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-105",
+                            isOnline
+                                ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.15)]"
                                 : "bg-red-500/10 border border-red-500/30 text-red-500"
                         )}>
-                            <Server className="w-5 h-5" />
+                            <Server className="w-5 h-5" aria-hidden="true" />
                         </div>
                         <div>
                             <CardTitle className="text-sm font-extrabold tracking-tight text-foreground">
-                                {server.id.toUpperCase()}
+                                {server.name || server.hostname || server.id}
                             </CardTitle>
                             <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                                {server.hostname}
+                                {server.name ? server.hostname : server.id}
                             </p>
                         </div>
                     </div>
@@ -144,7 +197,7 @@ function ServerCard({ server }: { server: ServerWithMetrics }) {
                         <span className="text-[8px] uppercase tracking-wider text-muted-foreground/60 font-sans font-bold mr-1.5">LAN</span>
                         <span className="text-foreground/90 font-semibold">{server.ip_lan}</span>
                     </div>
-                    <div className="w-[1px] h-3 bg-border/20 mx-1.5" />
+                    <div className="w-[1px] h-3 bg-border/20 mx-1.5" aria-hidden="true" />
                     <div>
                         <span className="text-[8px] uppercase tracking-wider text-muted-foreground/60 font-sans font-bold mr-1.5">Tailscale</span>
                         <span className="text-foreground/90 font-semibold">{server.ip_tailscale || "—"}</span>
@@ -157,68 +210,42 @@ function ServerCard({ server }: { server: ServerWithMetrics }) {
                         <div>
                             <div className="flex items-center justify-between text-[11px] mb-1 font-medium">
                                 <span className="text-muted-foreground flex items-center gap-1.5">
-                                    <Cpu className="w-3.5 h-3.5 text-muted-foreground/80" /> CPU
+                                    <Cpu className="w-3.5 h-3.5 text-muted-foreground/80" aria-hidden="true" /> CPU
                                 </span>
-                                <span className={cn("font-semibold", 
-                                    cpuPercent > 80 ? "text-red-500" : cpuPercent > 60 ? "text-amber-500" : "text-emerald-500"
-                                )}>
+                                <span className={cn("font-semibold tabular-nums", metricTextClass[cpuTone])}>
                                     {cpuPercent.toFixed(1)}%
                                 </span>
                             </div>
-                            <ProgressBar
-                                value={cpuPercent}
-                                color={
-                                    cpuPercent > 80 ? "bg-gradient-to-r from-red-500 to-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.25)]" : 
-                                    cpuPercent > 60 ? "bg-gradient-to-r from-amber-500 to-yellow-400 shadow-[0_0_8px_rgba(245,158,11,0.2)]" : 
-                                    "bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_8px_rgba(16,185,129,0.2)]"
-                                }
-                            />
+                            <ProgressBar value={cpuPercent} tone={cpuTone} />
                         </div>
 
                         <div>
                             <div className="flex items-center justify-between text-[11px] mb-1 font-medium">
                                 <span className="text-muted-foreground flex items-center gap-1.5">
-                                    <MemoryStick className="w-3.5 h-3.5 text-muted-foreground/80" /> RAM
+                                    <MemoryStick className="w-3.5 h-3.5 text-muted-foreground/80" aria-hidden="true" /> RAM
                                 </span>
-                                <span className={cn("font-semibold", 
-                                    ramPercent > 85 ? "text-red-500" : ramPercent > 70 ? "text-amber-500" : "text-emerald-500"
-                                )}>
+                                <span className={cn("font-semibold tabular-nums", metricTextClass[ramTone])}>
                                     {ramPercent}% ({Math.round(server.metrics.ram_used_mb / 1024)}GB / {server.ram_gb || 32}GB)
                                 </span>
                             </div>
-                            <ProgressBar
-                                value={ramPercent}
-                                color={
-                                    ramPercent > 85 ? "bg-gradient-to-r from-red-500 to-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.25)]" : 
-                                    ramPercent > 70 ? "bg-gradient-to-r from-amber-500 to-yellow-400 shadow-[0_0_8px_rgba(245,158,11,0.2)]" : 
-                                    "bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_8px_rgba(16,185,129,0.2)]"
-                                }
-                            />
+                            <ProgressBar value={ramPercent} tone={ramTone} />
                         </div>
 
                         <div>
                             <div className="flex items-center justify-between text-[11px] mb-1 font-medium">
                                 <span className="text-muted-foreground flex items-center gap-1.5">
-                                    <HardDrive className="w-3.5 h-3.5 text-muted-foreground/80" /> Disco
+                                    <HardDrive className="w-3.5 h-3.5 text-muted-foreground/80" aria-hidden="true" /> Disco
                                 </span>
-                                <span className={cn("font-semibold", 
-                                    diskPercent > 90 ? "text-red-500" : "text-muted-foreground"
-                                )}>
+                                <span className={cn("font-semibold tabular-nums", diskTone === "danger" ? "text-red-500" : "text-muted-foreground")}>
                                     {diskPercent.toFixed(1)}%
                                 </span>
                             </div>
-                            <ProgressBar
-                                value={diskPercent}
-                                color={
-                                    diskPercent > 90 ? "bg-gradient-to-r from-red-500 to-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.25)]" : 
-                                    "bg-gradient-to-r from-primary to-violet-400 shadow-[0_0_8px_color-mix(in_srgb,var(--primary)_20%,transparent)]"
-                                }
-                            />
+                            <ProgressBar value={diskPercent} tone={diskTone === "danger" ? "danger" : "info"} />
                         </div>
                     </div>
                 ) : (
                     <div className="py-[34px] flex flex-col items-center justify-center border border-dashed border-red-500/10 rounded-xl bg-red-500/[0.02]">
-                        <WifiOff className="w-6 h-6 text-red-500/40 mb-1" />
+                        <WifiOff className="w-6 h-6 text-red-500/40 mb-1" aria-hidden="true" />
                         <p className="text-[9px] text-red-500/60 font-sans font-semibold tracking-wider uppercase">Servidor fuera de línea</p>
                     </div>
                 )}
@@ -227,12 +254,122 @@ function ServerCard({ server }: { server: ServerWithMetrics }) {
                 <div className="flex items-center justify-between pt-3 border-t border-border/20 text-xs">
                     <span className="text-muted-foreground font-medium">{t("dashboard.activeSessionsCount")}</span>
                     <Badge variant="secondary" className="font-bold bg-accent/40 text-foreground border-none rounded-full px-2.5 py-0.5">
-                        <Users className="w-3 h-3 mr-1.5 text-muted-foreground" />
+                        <Users className="w-3 h-3 mr-1.5 text-muted-foreground" aria-hidden="true" />
                         {server.active_sessions_count ?? 0}
                     </Badge>
                 </div>
             </CardContent>
         </Card>
+    );
+}
+
+// ─── Skeletons for Loading State ───
+function StatCardSkeleton() {
+    return (
+        <Card className="glass border border-border/10 rounded-2xl">
+            <CardContent className="p-5 flex flex-row items-center justify-between">
+                <div className="space-y-2.5 flex-1">
+                    <Skeleton className="h-3 w-16 rounded bg-accent/60" />
+                    <Skeleton className="h-8 w-24 rounded-lg bg-accent/80" />
+                    <Skeleton className="h-3 w-32 rounded bg-accent/40" />
+                </div>
+                <Skeleton className="w-12 h-12 rounded-2xl bg-accent/60 shrink-0" />
+            </CardContent>
+        </Card>
+    );
+}
+
+function ServerCardSkeleton() {
+    return (
+        <Card className="glass border border-border/10 rounded-2xl overflow-hidden">
+            <CardHeader className="pb-3 pt-4 px-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Skeleton className="w-10 h-10 rounded-xl bg-accent/60" />
+                        <div className="space-y-1.5">
+                            <Skeleton className="h-4 w-16 rounded bg-accent/80" />
+                            <Skeleton className="h-3 w-20 rounded bg-accent/40" />
+                        </div>
+                    </div>
+                    <Skeleton className="h-5 w-16 rounded-full bg-accent/45" />
+                </div>
+            </CardHeader>
+            <CardContent className="space-y-4 px-4 pb-4">
+                {/* Mock network */}
+                <div className="flex justify-between items-center bg-accent/15 px-3 py-2 rounded-xl border border-border/5">
+                    <Skeleton className="h-3 w-20 rounded bg-accent/40" />
+                    <Skeleton className="h-3 w-20 rounded bg-accent/40" />
+                </div>
+                {/* Mock progress bars */}
+                <div className="space-y-3 pt-1">
+                    <div className="space-y-1.5">
+                        <div className="flex justify-between">
+                            <Skeleton className="h-3 w-12 rounded bg-accent/40" />
+                            <Skeleton className="h-3 w-8 rounded bg-accent/50" />
+                        </div>
+                        <Skeleton className="h-2 w-full rounded-full bg-accent/30" />
+                    </div>
+                    <div className="space-y-1.5">
+                        <div className="flex justify-between">
+                            <Skeleton className="h-3 w-12 rounded bg-accent/40" />
+                            <Skeleton className="h-3 w-8 rounded bg-accent/50" />
+                        </div>
+                        <Skeleton className="h-2 w-full rounded-full bg-accent/30" />
+                    </div>
+                    <div className="space-y-1.5">
+                        <div className="flex justify-between">
+                            <Skeleton className="h-3 w-12 rounded bg-accent/40" />
+                            <Skeleton className="h-3 w-8 rounded bg-accent/50" />
+                        </div>
+                        <Skeleton className="h-2 w-full rounded-full bg-accent/30" />
+                    </div>
+                </div>
+                <div className="flex justify-between items-center pt-3 border-t border-border/20">
+                    <Skeleton className="h-3.5 w-24 rounded bg-accent/40" />
+                    <Skeleton className="h-5 w-8 rounded-full bg-accent/50" />
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+function DashboardSkeleton() {
+    return (
+        <div className="space-y-8">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="space-y-2">
+                    <Skeleton className="h-8 w-48 rounded-lg bg-accent/80" />
+                    <Skeleton className="h-4 w-64 rounded-md bg-accent/40" />
+                </div>
+                <Skeleton className="h-9 w-36 rounded-xl bg-accent/40 self-end sm:self-center" />
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                    <StatCardSkeleton key={i} />
+                ))}
+            </div>
+
+            {/* Server Section Header */}
+            <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                    <div className="space-y-1.5">
+                        <Skeleton className="h-6 w-32 rounded-lg bg-accent/80" />
+                        <Skeleton className="h-3.5 w-52 rounded-md bg-accent/40" />
+                    </div>
+                    <Skeleton className="h-9 w-48 rounded-xl bg-accent/40" />
+                </div>
+
+                {/* Server Grid Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[1, 2, 3].map((i) => (
+                        <ServerCardSkeleton key={i} />
+                    ))}
+                </div>
+            </div>
+        </div>
     );
 }
 
@@ -246,7 +383,10 @@ export default function DashboardPage() {
     const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
     const containerRef = useRef<HTMLDivElement>(null);
 
-    console.log("Dashboard render profileName:", profileName, "loading:", loading);
+    function changeViewMode(mode: "grid" | "table") {
+        setViewMode(mode);
+        localStorage.setItem("dashboard-view-mode", mode);
+    }
 
     async function fetchData() {
         try {
@@ -264,10 +404,7 @@ export default function DashboardPage() {
             }
             if (profileRes.ok) {
                 const profileData = await profileRes.json();
-                console.log("Dashboard API fetched profile:", profileData);
                 setProfileName(profileData.fullName || "");
-            } else {
-                console.error("Dashboard API profile fetch failed:", profileRes.status);
             }
         } catch (error) {
             console.error("Error fetching dashboard data:", error);
@@ -277,8 +414,13 @@ export default function DashboardPage() {
     }
 
     useEffect(() => {
+        const savedView = localStorage.getItem("dashboard-view-mode");
+        if (savedView === "grid" || savedView === "table") setViewMode(savedView);
+    }, []);
+
+    useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 15000); // Refresh every 15s
+        const interval = setInterval(fetchData, 60000); // Fallback refresh every 60s
 
         const handleProfileUpdate = async () => {
             try {
@@ -291,53 +433,53 @@ export default function DashboardPage() {
         };
         window.addEventListener("profile-updated", handleProfileUpdate);
 
+        // Realtime updates using WebSocket singleton
+        const socketIo = getSocket();
+        if (socketIo) {
+            socketIo.on("alert:new", fetchData);
+            socketIo.on("server:update", fetchData);
+        }
+
         return () => {
             clearInterval(interval);
             window.removeEventListener("profile-updated", handleProfileUpdate);
+            if (socketIo) {
+                socketIo.off("alert:new", fetchData);
+                socketIo.off("server:update", fetchData);
+            }
         };
     }, []);
 
-    useEffect(() => {
-        if (!loading && containerRef.current) {
-            const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-            tl.fromTo(containerRef.current.querySelector(".dashboard-header"),
-                { opacity: 0, y: -12 },
-                { opacity: 1, y: 0, duration: 0.6 }
-            )
-            .fromTo(containerRef.current.querySelectorAll(".stat-card-anim"),
-                { opacity: 0, y: 15 },
-                { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 },
-                "-=0.45"
-            )
-            .fromTo(containerRef.current.querySelector(".servers-header"),
-                { opacity: 0, y: -10 },
-                { opacity: 1, y: 0, duration: 0.45 },
-                "-=0.3"
-            )
-            .fromTo(containerRef.current.querySelectorAll(".server-card-anim"),
-                { opacity: 0, y: 15 },
-                { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 },
-                "-=0.35"
-            );
+    useGSAP(() => {
+        if (!loading) {
+            const mm = gsap.matchMedia();
+            mm.add("(prefers-reduced-motion: no-preference)", () => {
+                const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+                tl.fromTo(".dashboard-header",
+                    { opacity: 0, y: -12 },
+                    { opacity: 1, y: 0, duration: 0.6 }
+                )
+                .fromTo(".stat-card-anim",
+                    { opacity: 0, y: 15 },
+                    { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 },
+                    "-=0.45"
+                )
+                .fromTo(".servers-header",
+                    { opacity: 0, y: -10 },
+                    { opacity: 1, y: 0, duration: 0.45 },
+                    "-=0.3"
+                )
+                .fromTo(".server-card-anim",
+                    { opacity: 0, y: 15 },
+                    { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 },
+                    "-=0.35"
+                );
+            });
         }
-    }, [loading, viewMode]);
+    }, { dependencies: [loading, viewMode], scope: containerRef });
 
     if (loading) {
-        return (
-            <div className="space-y-6">
-                <div>
-                    <h1 className="text-2xl font-bold">{t("dashboard.title")}</h1>
-                    <p className="text-muted-foreground text-sm mt-1">{t("dashboard.loading")}</p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4].map((i) => (
-                        <Card key={i} className="glass border-border/20 animate-pulse">
-                            <CardContent className="p-6 h-24" />
-                        </Card>
-                    ))}
-                </div>
-            </div>
-        );
+        return <DashboardSkeleton />;
     }
 
     return (
@@ -368,8 +510,9 @@ export default function DashboardPage() {
                         size="icon" 
                         className="h-7 w-7 rounded-lg hover:bg-accent/40 text-muted-foreground hover:text-foreground transition-colors duration-200"
                         onClick={fetchData}
+                        aria-label={t("dashboard.refresh") || "Actualizar datos"}
                     >
-                        <RefreshCw className="w-3.5 h-3.5" />
+                        <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
                     </Button>
                 </div>
             </div>
@@ -438,9 +581,10 @@ export default function DashboardPage() {
                                     ? "bg-primary/20 text-primary border border-primary/25 shadow-sm"
                                     : "text-muted-foreground hover:text-foreground"
                             )}
-                            onClick={() => setViewMode("grid")}
+                            onClick={() => changeViewMode("grid")}
+                            aria-pressed={viewMode === "grid"}
                         >
-                            <LayoutGrid className="w-3.5 h-3.5" />
+                            <LayoutGrid className="w-3.5 h-3.5" aria-hidden="true" />
                             Vista de tarjetas
                         </Button>
                         <Button
@@ -452,15 +596,26 @@ export default function DashboardPage() {
                                     ? "bg-primary/20 text-primary border border-primary/25 shadow-sm"
                                     : "text-muted-foreground hover:text-foreground"
                             )}
-                            onClick={() => setViewMode("table")}
+                            onClick={() => changeViewMode("table")}
+                            aria-pressed={viewMode === "table"}
                         >
-                            <List className="w-3.5 h-3.5" />
+                            <List className="w-3.5 h-3.5" aria-hidden="true" />
                             Vista de tabla
                         </Button>
                     </div>
                 </div>
 
-                {viewMode === "grid" ? (
+                {servers.length === 0 ? (
+                    <div className="server-card-anim opacity-0 glass border border-border/20 rounded-2xl flex flex-col items-center justify-center text-center py-16 px-6">
+                        <div className="w-14 h-14 rounded-2xl bg-accent/40 border border-border/20 flex items-center justify-center mb-4">
+                            <Server className="w-6 h-6 text-muted-foreground/70" aria-hidden="true" />
+                        </div>
+                        <h3 className="text-sm font-bold text-foreground">{t("dashboard.noServersTitle") || "Aún no hay servidores"}</h3>
+                        <p className="text-xs text-muted-foreground/70 mt-1.5 max-w-xs">
+                            {t("dashboard.noServersDesc") || "Cuando un agente se conecte con su API Key, aparecerá aquí automáticamente."}
+                        </p>
+                    </div>
+                ) : viewMode === "grid" ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {servers.map((server) => (
                             <div key={server.id} className="server-card-anim opacity-0">
@@ -492,11 +647,15 @@ export default function DashboardPage() {
                                             : 0;
                                         const diskPercent = server.metrics?.disk_percent ?? 0;
 
+                                        const cpuTone = getMetricTone(cpuPercent, 60, 80);
+                                        const ramTone = getMetricTone(ramPercent, 70, 85);
+                                        const diskTone = getMetricTone(diskPercent, 90, 90);
+
                                         return (
                                             <tr key={server.id} className="border-b border-border/10 hover:bg-accent/25 transition-colors">
                                                 <td className="p-4">
-                                                    <div className="font-bold text-sm text-foreground">{server.id.toUpperCase()}</div>
-                                                    <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{server.hostname}</div>
+                                                    <div className="font-bold text-sm text-foreground">{server.name || server.hostname || server.id}</div>
+                                                    <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{server.name ? server.hostname : server.id}</div>
                                                 </td>
                                                 <td className="p-4">
                                                     <Badge className={cn("text-[9px] font-bold border-none rounded-full px-2.5 py-0.5",
@@ -512,9 +671,9 @@ export default function DashboardPage() {
                                                 <td className="p-4">
                                                     {isOnline && server.metrics ? (
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-mono text-xs w-10 shrink-0 font-semibold">{cpuPercent.toFixed(1)}%</span>
-                                                            <div className="w-20 h-1.5 bg-accent/40 rounded-full overflow-hidden">
-                                                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${cpuPercent}%` }} />
+                                                            <span className={cn("font-mono text-xs w-10 shrink-0 font-semibold", metricTextClass[cpuTone])}>{cpuPercent.toFixed(1)}%</span>
+                                                            <div className="w-20">
+                                                                <ProgressBar value={cpuPercent} tone={cpuTone} />
                                                             </div>
                                                         </div>
                                                     ) : "—"}
@@ -522,9 +681,9 @@ export default function DashboardPage() {
                                                 <td className="p-4">
                                                     {isOnline && server.metrics ? (
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-mono text-xs w-10 shrink-0 font-semibold">{ramPercent}%</span>
-                                                            <div className="w-20 h-1.5 bg-accent/40 rounded-full overflow-hidden">
-                                                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${ramPercent}%` }} />
+                                                            <span className={cn("font-mono text-xs w-10 shrink-0 font-semibold", metricTextClass[ramTone])}>{ramPercent}%</span>
+                                                            <div className="w-20">
+                                                                <ProgressBar value={ramPercent} tone={ramTone} />
                                                             </div>
                                                         </div>
                                                     ) : "—"}
@@ -532,9 +691,9 @@ export default function DashboardPage() {
                                                 <td className="p-4">
                                                     {isOnline && server.metrics ? (
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-mono text-xs w-10 shrink-0 font-semibold">{diskPercent.toFixed(1)}%</span>
-                                                            <div className="w-20 h-1.5 bg-accent/40 rounded-full overflow-hidden">
-                                                                <div className="h-full bg-primary rounded-full" style={{ width: `${diskPercent}%` }} />
+                                                            <span className={cn("font-mono text-xs w-10 shrink-0 font-semibold", diskTone === "danger" ? "text-red-500" : "text-muted-foreground")}>{diskPercent.toFixed(1)}%</span>
+                                                            <div className="w-20">
+                                                                <ProgressBar value={diskPercent} tone={diskTone === "danger" ? "danger" : "info"} />
                                                             </div>
                                                         </div>
                                                     ) : "—"}

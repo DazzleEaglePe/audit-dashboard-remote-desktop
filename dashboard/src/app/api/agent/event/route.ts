@@ -5,8 +5,9 @@ import {
   errorResponse,
   successResponse,
 } from '@/lib/api-middleware';
-import { insertSessionLog, insertAlert } from '@/lib/db';
+import { insertSessionLog, insertAlert, verifyAndRegisterServer } from '@/lib/db';
 import type { AgentEventPayload } from '@/types';
+import { notifySessionUpdate } from '@/lib/socket';
 
 // ═══════════════════════════════════════════════════════
 // POST /api/agent/event
@@ -15,10 +16,6 @@ import type { AgentEventPayload } from '@/types';
 
 export async function POST(request: NextRequest) {
   try {
-    if (!validateApiKey(request)) {
-      return unauthorizedResponse('Invalid API key');
-    }
-
     const body = (await request.json()) as AgentEventPayload;
 
     // Validate required fields
@@ -29,8 +26,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate API key dynamically and resolve tenantId, enforcing device binding
+    const auth = await validateApiKey(request, body.server_id);
+    if (!auth.valid || !auth.tenantId) {
+      return unauthorizedResponse('Invalid API key');
+    }
+    const tenantId = auth.tenantId;
+
+    if (auth.deviceId && auth.deviceId !== body.server_id) {
+      return unauthorizedResponse('La API key no corresponde a este equipo');
+    }
+
+    // Verify server ownership / auto-register under this tenant
+    const verified = await verifyAndRegisterServer(
+      body.server_id,
+      tenantId,
+      undefined,
+      undefined,
+      undefined
+    );
+
+    if (!verified) {
+      return errorResponse('Forbidden: Server belongs to another tenant', 403);
+    }
+
     // Store event log
-    insertSessionLog({
+    await insertSessionLog({
       server_id: body.server_id,
       username: body.username,
       event_type: body.event_type as 'connect' | 'disconnect' | 'idle' | 'active',
@@ -42,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     // Generate alert for login failures
     if (body.event_type === 'login_failed') {
-      insertAlert({
+      await insertAlert({
         server_id: body.server_id,
         alert_type: 'login_failed',
         severity: 'warning',
@@ -50,16 +71,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Store for WebSocket emission
-    if (typeof globalThis !== 'undefined') {
-      (globalThis as Record<string, unknown>).__lastEvent = {
-        server_id: body.server_id,
-        username: body.username,
-        event_type: body.event_type,
-        session_id: body.session_id,
-        timestamp: body.timestamp,
-      };
-    }
+    // Emit WebSocket event
+    notifySessionUpdate(tenantId, body.server_id, {
+      username: body.username,
+      event_type: body.event_type,
+      session_id: body.session_id,
+      timestamp: body.timestamp,
+    });
 
     return successResponse({
       status: 'ok',
@@ -71,3 +89,4 @@ export async function POST(request: NextRequest) {
     return errorResponse('Internal server error');
   }
 }
+

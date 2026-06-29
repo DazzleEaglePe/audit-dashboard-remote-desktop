@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
+import { getSocket } from "@/lib/socket-client";
 import {
     LayoutDashboard,
     Monitor,
@@ -25,6 +27,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/components/language-provider";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogMedia,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function Sidebar() {
     const pathname = usePathname();
@@ -33,6 +46,7 @@ export function Sidebar() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [unreadAlerts, setUnreadAlerts] = useState(0);
+    const [logoutOpen, setLogoutOpen] = useState(false);
     const navItems = [
         { href: "/", label: t("sidebar.dashboard"), icon: LayoutDashboard },
         { href: "/screenshots", label: t("sidebar.screenshots"), icon: Monitor },
@@ -79,7 +93,13 @@ export function Sidebar() {
             } catch { /* ignore */ }
         }
         fetchAlerts();
-        const interval = setInterval(fetchAlerts, 30000);
+        const interval = setInterval(fetchAlerts, 60000); // Fallback polling every 60s
+
+        // Realtime alerts updates using WebSocket singleton
+        const socketIo = getSocket();
+        if (socketIo) {
+            socketIo.on("alert:new", fetchAlerts);
+        }
 
         fetchProfile();
         window.addEventListener("profile-updated", fetchProfile);
@@ -87,6 +107,9 @@ export function Sidebar() {
         return () => {
             clearInterval(interval);
             window.removeEventListener("profile-updated", fetchProfile);
+            if (socketIo) {
+                socketIo.off("alert:new", fetchAlerts);
+            }
         };
     }, []);
 
@@ -102,42 +125,10 @@ export function Sidebar() {
 
     };
 
-    async function handleLogout() {
-        try {
-            const Swal = (await import('sweetalert2')).default;
-            const withReactContent = (await import('sweetalert2-react-content')).default;
-            const MySwal = withReactContent(Swal);
-
-            const result = await MySwal.fire({
-                title: t("sidebar.logoutConfirmTitle"),
-                text: t("sidebar.logoutConfirmText"),
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: t("sidebar.logoutConfirmYes"),
-                cancelButtonText: t("sidebar.logoutConfirmNo"),
-                background: 'var(--card)',
-                color: 'var(--foreground)',
-                customClass: {
-                    popup: 'border border-border/50 rounded-xl',
-                    confirmButton: 'bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md font-medium transition-colors',
-                    cancelButton: 'bg-transparent text-foreground border border-border hover:bg-accent hover:text-accent-foreground px-4 py-2 rounded-md font-medium transition-colors ml-2',
-                },
-                buttonsStyling: false,
-            });
-
-            if (result.isConfirmed) {
-                document.cookie = "auth-token=; path=/; max-age=0";
-                router.push("/login");
-                router.refresh();
-            }
-        } catch (error) {
-            // Fallback in case chunk fails to load
-            if (window.confirm(t("sidebar.logoutConfirmTitle") + " " + t("sidebar.logoutConfirmText"))) {
-                document.cookie = "auth-token=; path=/; max-age=0";
-                router.push("/login");
-                router.refresh();
-            }
-        }
+    function confirmLogout() {
+        document.cookie = "auth-token=; path=/; max-age=0";
+        router.push("/login");
+        router.refresh();
     }
 
     const NavContent = () => (
@@ -197,8 +188,14 @@ export function Sidebar() {
                 <div className={cn("flex items-center gap-3 min-w-0", isCollapsed ? "justify-center" : "")}>
                     <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 text-primary flex items-center justify-center font-bold text-sm shrink-0 shadow-md shadow-primary/5 overflow-hidden">
                         {profile.avatarUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                            <Image 
+                                src={profile.avatarUrl} 
+                                alt={`Avatar de ${profile.fullName}`} 
+                                width={40} 
+                                height={40} 
+                                className="w-full h-full object-cover" 
+                                unoptimized 
+                            />
                         ) : (
                             profile.fullName.substring(0, 2).toUpperCase()
                         )}
@@ -209,7 +206,7 @@ export function Sidebar() {
                                 <p className="text-xs font-bold text-foreground truncate">{profile.fullName}</p>
                                 <p className="text-[10px] text-muted-foreground truncate">@{profile.username}</p>
                             </div>
-                            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0 ml-1" />
+                            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0 ml-1" aria-hidden="true" />
                         </div>
                     </div>
                 </div>
@@ -217,10 +214,11 @@ export function Sidebar() {
                 <Button
                     variant="ghost"
                     className={cn("w-full gap-3 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all rounded-xl", isCollapsed ? "justify-center px-0" : "justify-start px-3")}
-                    onClick={handleLogout}
+                    onClick={() => setLogoutOpen(true)}
                     title={isCollapsed ? t("sidebar.logout") : undefined}
+                    aria-label={t("sidebar.logout") || "Cerrar sesión"}
                 >
-                    <LogOut className="w-5 h-5 shrink-0" />
+                    <LogOut className="w-5 h-5 shrink-0" aria-hidden="true" />
                     <span className={cn("transition-all duration-300 truncate text-xs font-semibold", isCollapsed ? "w-0 opacity-0 hidden" : "block")}>{t("sidebar.logout")}</span>
                 </Button>
 
@@ -230,8 +228,10 @@ export function Sidebar() {
                     size="sm"
                     className="hidden md:flex w-full justify-center text-muted-foreground hover:bg-accent/40 h-8 mt-1 rounded-lg"
                     onClick={toggleCollapse}
+                    aria-label={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+                    aria-expanded={!isCollapsed}
                 >
-                    {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+                    {isCollapsed ? <ChevronRight className="w-4 h-4" aria-hidden="true" /> : <ChevronLeft className="w-4 h-4" aria-hidden="true" />}
                 </Button>
             </div>
         </>
@@ -245,8 +245,10 @@ export function Sidebar() {
                 size="icon"
                 className="fixed top-3 left-4 z-50 md:hidden bg-background/80 backdrop-blur-md border-border/20 shadow-md rounded-xl"
                 onClick={() => setMobileOpen(!mobileOpen)}
+                aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
+                aria-expanded={mobileOpen}
             >
-                {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                {mobileOpen ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
             </Button>
 
             {/* Mobile overlay */}
@@ -270,6 +272,34 @@ export function Sidebar() {
             >
                 <NavContent />
             </aside>
+
+            {/* AlertDialog para confirmar Logout */}
+            <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+                <AlertDialogContent size="sm" className="rounded-2xl">
+                    <AlertDialogHeader>
+                        <AlertDialogMedia className="bg-red-500/10 text-red-500">
+                            <LogOut aria-hidden="true" />
+                        </AlertDialogMedia>
+                        <AlertDialogTitle>{t("sidebar.logoutConfirmTitle")}</AlertDialogTitle>
+                        <AlertDialogDescription className="text-xs">
+                            {t("sidebar.logoutConfirmText")}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-2">
+                        <AlertDialogCancel size="sm" className="text-xs">
+                            {t("sidebar.logoutConfirmNo")}
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            variant="destructive"
+                            size="sm"
+                            onClick={confirmLogout}
+                            className="text-xs font-semibold"
+                        >
+                            {t("sidebar.logoutConfirmYes")}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

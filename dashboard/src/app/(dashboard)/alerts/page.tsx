@@ -18,7 +18,11 @@ import { toast } from "sonner";
 import type { Alert } from "@/types";
 import { useLanguage } from "@/components/language-provider";
 import { parseUtcDate, cn } from "@/lib/utils";
-import { gsap } from "gsap";
+import { useServers } from "@/hooks/use-servers";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import { Skeleton } from "@/components/ui/skeleton";
+
 
 const ALERT_CONFIG: Record<string, { icon: React.ElementType; color: string }> = {
     server_down: {
@@ -51,6 +55,7 @@ const SEVERITY_COLORS: Record<string, string> = {
 
 export default function AlertsPage() {
     const { t } = useLanguage();
+    const { servers } = useServers();
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [loading, setLoading] = useState(true);
     const [showUnreadOnly, setShowUnreadOnly] = useState(false);
@@ -75,20 +80,23 @@ export default function AlertsPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [showUnreadOnly]);
 
-    useEffect(() => {
-        if (!loading && containerRef.current) {
-            const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-            tl.fromTo(containerRef.current.querySelector(".alerts-header"),
-                { opacity: 0, y: -12 },
-                { opacity: 1, y: 0, duration: 0.6 }
-            )
-            .fromTo(containerRef.current.querySelectorAll(".alert-card-anim"),
-                { opacity: 0, y: 15 },
-                { opacity: 1, y: 0, duration: 0.5, stagger: 0.06 },
-                "-=0.45"
-            );
+    useGSAP(() => {
+        if (!loading) {
+            const mm = gsap.matchMedia();
+            mm.add("(prefers-reduced-motion: no-preference)", () => {
+                const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+                tl.fromTo(".alerts-header",
+                    { opacity: 0, y: -12 },
+                    { opacity: 1, y: 0, duration: 0.6 }
+                )
+                .fromTo(".alert-card-anim",
+                    { opacity: 0, y: 15 },
+                    { opacity: 1, y: 0, duration: 0.5, stagger: 0.06 },
+                    "-=0.45"
+                );
+            });
         }
-    }, [loading, alerts.length]);
+    }, { dependencies: [loading, alerts.length], scope: containerRef });
 
     async function markAsRead(alertId: number) {
         try {
@@ -154,8 +162,20 @@ export default function AlertsPage() {
             {loading ? (
                 <div className="space-y-3">
                     {[1, 2, 3].map((i) => (
-                        <Card key={i} className="glass border-border/20 animate-pulse">
-                            <div className="p-4 h-20" />
+                        <Card key={i} className="glass border border-border/10">
+                            <div className="p-4 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                                    <Skeleton className="w-10 h-10 rounded-xl bg-accent/60 shrink-0" />
+                                    <div className="space-y-2 flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <Skeleton className="h-4 w-28 rounded bg-accent/80" />
+                                            <Skeleton className="h-3 w-16 rounded bg-accent/40" />
+                                        </div>
+                                        <Skeleton className="h-3.5 w-3/4 rounded bg-accent/50" />
+                                    </div>
+                                </div>
+                                <Skeleton className="h-8 w-20 rounded-xl bg-accent/50 shrink-0" />
+                            </div>
                         </Card>
                     ))}
                 </div>
@@ -214,7 +234,7 @@ export default function AlertsPage() {
                                                     </Badge>
                                                     {alert.server_id && (
                                                         <Badge variant="outline" className="text-[9px] font-semibold bg-accent/30 text-muted-foreground border-border/10 rounded-lg px-1.5 py-0">
-                                                            {alert.server_id.toUpperCase()}
+                                                            {servers.find(s => s.id === alert.server_id)?.name || servers.find(s => s.id === alert.server_id)?.hostname || alert.server_id}
                                                         </Badge>
                                                     )}
                                                 </div>

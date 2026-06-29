@@ -6,27 +6,30 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/components/language-provider";
 import { BarChart3, LineChart, PieChart, ArrowLeft, Wrench, Sparkles } from "lucide-react";
-import { gsap } from "gsap";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+
 
 export default function ReportsPage() {
     const { t } = useLanguage();
     const router = useRouter();
     const containerRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        if (containerRef.current) {
+    useGSAP(() => {
+        const mm = gsap.matchMedia();
+        mm.add("(prefers-reduced-motion: no-preference)", () => {
             const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
             tl.fromTo(containerRef.current,
                 { opacity: 0, y: -10 },
                 { opacity: 1, y: 0, duration: 0.6 }
             )
-            .fromTo(containerRef.current.querySelectorAll(".animate-item"),
+            .fromTo(".animate-item",
                 { opacity: 0, y: 15 },
                 { opacity: 1, y: 0, duration: 0.5, stagger: 0.1 },
                 "-=0.35"
             );
-        }
-    }, []);
+        });
+    }, { scope: containerRef });
 
     return (
         <div ref={containerRef} className="space-y-6 max-w-5xl mx-auto opacity-0">

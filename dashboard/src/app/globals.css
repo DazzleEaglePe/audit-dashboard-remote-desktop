@@ -45,7 +45,7 @@
 
 :root {
   --radius: 0.75rem;
-  --background: oklch(0.99 0.005 240);
+  --background: oklch(0.976 0.004 250); /* Subtle cool gray canvas so white cards pop (Supabase/Stripe) */
   --foreground: oklch(0.12 0.01 240);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.12 0.01 240);
@@ -53,15 +53,15 @@
   --popover-foreground: oklch(0.12 0.01 240);
   --primary: oklch(0.55 0.22 255); /* Electric Violet */
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.95 0.01 240);
+  --secondary: oklch(0.955 0.008 250);
   --secondary-foreground: oklch(0.2 0.01 240);
-  --muted: oklch(0.95 0.01 240);
-  --muted-foreground: oklch(0.50 0.01 240);
-  --accent: oklch(0.94 0.015 250);
+  --muted: oklch(0.955 0.008 250);
+  --muted-foreground: oklch(0.47 0.012 250); /* Slightly darker for readable secondary text */
+  --accent: oklch(0.945 0.012 250);
   --accent-foreground: oklch(0.15 0.02 250);
   --destructive: oklch(0.58 0.22 25);
-  --border: oklch(0.91 0.01 240);
-  --input: oklch(0.91 0.01 240);
+  --border: oklch(0.9 0.006 250); /* Crisper, cooler 1px borders */
+  --input: oklch(0.9 0.006 250);
   --ring: oklch(0.55 0.22 255);
   
   --chart-1: oklch(0.60 0.18 200);
@@ -233,6 +233,36 @@ body::before {
   box-shadow: 0 0 25px 0 color-mix(in srgb, var(--primary) 20%, transparent);
   opacity: 0.5;
   pointer-events: none;
+}
+
+/* Modern shimmer skeleton (Stripe / Supabase style) */
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--foreground) 7%, transparent),
+    transparent
+  );
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer::after {
+    animation: none;
+  }
 }
 
 /* Status pulses */
