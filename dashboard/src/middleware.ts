@@ -78,6 +78,22 @@ export function middleware(request: NextRequest) {
       }
     }
 
+    // Force role gating for viewer role
+    if (payload.role === 'viewer') {
+      const isBlockedRoute =
+        pathname === '/settings' ||
+        pathname === '/users' ||
+        pathname.startsWith('/api/settings/') ||
+        pathname.startsWith('/api/users');
+
+      if (isBlockedRoute) {
+        if (pathname.startsWith('/api/')) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+        return NextResponse.redirect(new URL('/', request.url));
+      }
+    }
+
     return NextResponse.next();
   } catch {
     // Token expired or invalid

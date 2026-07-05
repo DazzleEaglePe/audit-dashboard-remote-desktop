@@ -13,8 +13,9 @@ export async function POST(request: NextRequest) {
   try {
     const ip = request.headers.get('x-forwarded-for') || 'unknown-ip';
     
-    // Check rate limit: 5 requests per minute per IP
-    if (!rateLimit(`login_${ip}`, 5, 60000)) {
+    // Check rate limit: 5 requests per minute per IP (bypassed in development mode)
+    const isDev = process.env.NODE_ENV !== 'production';
+    if (!isDev && !rateLimit(`login_${ip}`, 5, 60000)) {
       return NextResponse.json({ error: 'Too many login attempts, please try again later.' }, { status: 429 });
     }
 

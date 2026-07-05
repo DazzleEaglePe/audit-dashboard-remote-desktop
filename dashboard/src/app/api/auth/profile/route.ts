@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
     username: user.username,
     fullName: user.full_name || 'Administrador',
     avatarUrl: user.avatar_url || '',
+    role: user.role || 'viewer',
   });
 }
 

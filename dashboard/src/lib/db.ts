@@ -968,3 +968,129 @@ export async function tenantNeedsOnboarding(tenantId: string): Promise<boolean> 
   return !emails;
 }
 
+export async function listUsersByTenant(tenantId: string) {
+  const db = getDrizzleDb();
+  const rows = await db.select({
+    id: schema.users.id,
+    tenant_id: schema.users.tenant_id,
+    username: schema.users.username,
+    full_name: schema.users.full_name,
+    email: schema.users.email,
+    avatar_url: schema.users.avatar_url,
+    role: schema.users.role,
+    created_at: schema.users.created_at,
+    activation_token: schema.users.activation_token,
+  })
+  .from(schema.users)
+  .where(eq(schema.users.tenant_id, tenantId))
+  .orderBy(schema.users.id);
+  
+  return rows.map(r => ({
+    id: r.id,
+    tenantId: r.tenant_id,
+    username: r.username,
+    fullName: r.full_name || '',
+    email: r.email || '',
+    avatarUrl: r.avatar_url || '',
+    role: r.role || 'viewer',
+    createdAt: r.created_at,
+    pending: r.activation_token !== null,
+  }));
+}
+
+export async function createTenantUser(data: {
+  tenantId: string;
+  username: string;
+  email: string;
+  fullName: string;
+  role: 'admin' | 'viewer';
+}) {
+  const db = getDrizzleDb();
+  
+  // Generate activation token
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
+  
+  // Temporary random password
+  const tempPassword = crypto.randomBytes(16).toString('hex');
+  const passwordHash = bcryptjs.hashSync(tempPassword, 10);
+  
+  const [user] = await db.insert(schema.users)
+    .values({
+      tenant_id: data.tenantId,
+      username: data.username,
+      email: data.email,
+      full_name: data.fullName,
+      role: data.role,
+      password_hash: passwordHash,
+      password_change_required: 1,
+      activation_token: token,
+      activation_token_expires_at: expiresAt,
+    })
+    .returning();
+    
+  return { user, activationToken: token };
+}
+
+export async function updateTenantUser(
+  id: number,
+  tenantId: string,
+  data: {
+    fullName?: string;
+    role?: 'admin' | 'viewer';
+    username?: string;
+  }
+) {
+  const db = getDrizzleDb();
+  const updates: Partial<typeof schema.users.$inferInsert> = {};
+  if (data.fullName !== undefined) updates.full_name = data.fullName;
+  if (data.role !== undefined) updates.role = data.role;
+  if (data.username !== undefined) updates.username = data.username;
+  
+  const [updatedUser] = await db.update(schema.users)
+    .set(updates)
+    .where(and(
+      eq(schema.users.id, id),
+      eq(schema.users.tenant_id, tenantId)
+    ))
+    .returning();
+    
+  return updatedUser;
+}
+
+export async function deleteTenantUser(id: number, tenantId: string) {
+  const db = getDrizzleDb();
+  const [deletedUser] = await db.delete(schema.users)
+    .where(and(
+      eq(schema.users.id, id),
+      eq(schema.users.tenant_id, tenantId)
+    ))
+    .returning();
+    
+  return deletedUser;
+}
+
+export async function countAdminsInTenant(tenantId: string): Promise<number> {
+  const db = getDrizzleDb();
+  const rows = await db.select({ count: sql<number>`count(*)` })
+    .from(schema.users)
+    .where(and(
+      eq(schema.users.tenant_id, tenantId),
+      eq(schema.users.role, 'admin')
+    ));
+    
+  return Number(rows[0]?.count || 0);
+}
+
+export async function getUserById(id: number, tenantId: string) {
+  const db = getDrizzleDb();
+  const rows = await db.select()
+    .from(schema.users)
+    .where(and(
+      eq(schema.users.id, id),
+      eq(schema.users.tenant_id, tenantId)
+    ));
+    
+  return rows[0] || null;
+}
+

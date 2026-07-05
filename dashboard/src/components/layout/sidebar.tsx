@@ -54,12 +54,14 @@ export function Sidebar() {
         { href: "/#servers", label: t("sidebar.servers"), icon: Server },
         { href: "/alerts", label: t("sidebar.alerts"), icon: Bell },
         { href: "/reports", label: t("sidebar.reports"), icon: LineChart },
+        { href: "/users", label: t("sidebar.users") || "Usuarios", icon: Users },
         { href: "/settings", label: t("sidebar.settings"), icon: Settings },
     ];
-    const [profile, setProfile] = useState<{ fullName: string; avatarUrl: string; username: string }>({
+    const [profile, setProfile] = useState<{ fullName: string; avatarUrl: string; username: string; role: string }>({
         fullName: "Administrador",
         avatarUrl: "",
-        username: "admin"
+        username: "admin",
+        role: "viewer"
     });
 
     async function fetchProfile() {
@@ -148,7 +150,14 @@ export function Sidebar() {
 
             {/* Navigation */}
             <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto overflow-x-hidden">
-                {navItems.map((item) => {
+                {navItems
+                    .filter((item) => {
+                        if (profile.role === "viewer") {
+                            return item.href !== "/users" && item.href !== "/settings";
+                        }
+                        return true;
+                    })
+                    .map((item) => {
                     const isActive = pathname === item.href;
                     return (
                         <Link

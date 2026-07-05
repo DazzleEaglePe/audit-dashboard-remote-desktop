@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
+    "@heroui/react": "^3.2.1",
     "@socket.io/redis-adapter": "^8.3.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.6.2",
@@ -24,6 +25,7 @@
     "date-fns": "^4.1.0",
     "drizzle-orm": "^0.45.2",
     "eca-audit-monorepo": "file:..",
+    "framer-motion": "^12.42.2",
     "gsap": "^3.15.0",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.576.0",
