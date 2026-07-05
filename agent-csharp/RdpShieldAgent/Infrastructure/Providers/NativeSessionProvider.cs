@@ -2,10 +2,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Collections.Concurrent;
-using EcaMonitorAgent.Domain.Interfaces;
-using EcaMonitorAgent.Domain.Models;
+using RdpShieldAgent.Domain.Interfaces;
+using RdpShieldAgent.Domain.Models;
 
-namespace EcaMonitorAgent.Infrastructure.Providers;
+namespace RdpShieldAgent.Infrastructure.Providers;
 
 public class NativeSessionProvider : ISessionProvider
 {

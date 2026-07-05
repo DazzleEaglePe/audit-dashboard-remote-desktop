@@ -2,10 +2,10 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using SocketIOClient;
-using EcaMonitorAgent.Domain.Interfaces;
-using EcaMonitorAgent.Domain.Models;
+using RdpShieldAgent.Domain.Interfaces;
+using RdpShieldAgent.Domain.Models;
 
-namespace EcaMonitorAgent.Infrastructure.Providers;
+namespace RdpShieldAgent.Infrastructure.Providers;
 
 public class SocketIOEventDispatcher : IEventDispatcher
 {

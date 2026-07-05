@@ -1,12 +1,12 @@
 #Requires -RunAsAdministrator
 param(
-    [string]$CerPath = ".\ECA-CodeSign.cer"
+    [string]$CerPath = ".\RDPShield-CodeSign.cer"
 )
 
 $ErrorActionPreference = 'Stop'
 
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host " ECA Certificate Trust Setup" -ForegroundColor Cyan
+Write-Host " RDPShield Certificate Trust Setup" -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
 # 1. Check if CER exists

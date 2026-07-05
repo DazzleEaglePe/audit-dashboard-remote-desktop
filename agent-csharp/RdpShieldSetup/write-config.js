@@ -17,14 +17,14 @@ function WriteConfig() {
             return 3; // ERROR_INSTALL_FAILURE
         }
 
-        // Create ECA directory in CommonAppData
-        var ecaDir = commonAppData + "ECA";
-        if (!fso.FolderExists(ecaDir)) {
-            fso.CreateFolder(ecaDir);
+        // Create RDPShield directory in CommonAppData
+        var rdpshieldDir = commonAppData + "RDPShield";
+        if (!fso.FolderExists(rdpshieldDir)) {
+            fso.CreateFolder(rdpshieldDir);
         }
 
         // Write config.json file
-        var configFile = fso.CreateTextFile(ecaDir + "\\config.json", true);
+        var configFile = fso.CreateTextFile(rdpshieldDir + "\\config.json", true);
         configFile.WriteLine("{");
         configFile.WriteLine("  \"api_url\": \"" + apiUrl + "\",");
         configFile.WriteLine("  \"enroll_token\": \"" + token + "\",");
@@ -46,9 +46,9 @@ function CleanupConfig() {
             return 1;
         }
         
-        var ecaDir = data + "ECA";
-        if (fso.FolderExists(ecaDir)) {
-            fso.DeleteFolder(ecaDir, true);
+        var rdpshieldDir = data + "RDPShield";
+        if (fso.FolderExists(rdpshieldDir)) {
+            fso.DeleteFolder(rdpshieldDir, true);
         }
     } catch (err) {
         // Ignore errors during cleanup on uninstall

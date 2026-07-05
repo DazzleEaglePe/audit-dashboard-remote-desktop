@@ -10,15 +10,15 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using EcaMonitorAgent.Domain.Models;
+using RdpShieldAgent.Domain.Models;
 
-namespace EcaMonitorAgent.Infrastructure.Providers;
+namespace RdpShieldAgent.Infrastructure.Providers;
 
 public class EnrollmentManager
 {
     private readonly AgentConfig _config;
     private readonly ILogger<EnrollmentManager> _logger;
-    private static readonly string ProgramDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ECA");
+    private static readonly string ProgramDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "RDPShield");
     private static readonly string AgentIdFile = Path.Combine(ProgramDataPath, "agent-id");
     private static readonly string CredsFile = Path.Combine(ProgramDataPath, "cred");
 

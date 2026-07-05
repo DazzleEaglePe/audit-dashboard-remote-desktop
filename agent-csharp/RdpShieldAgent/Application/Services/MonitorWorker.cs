@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using EcaMonitorAgent.Domain.Interfaces;
-using EcaMonitorAgent.Domain.Models;
-using EcaMonitorAgent.Infrastructure.Providers;
+using RdpShieldAgent.Domain.Interfaces;
+using RdpShieldAgent.Domain.Models;
+using RdpShieldAgent.Infrastructure.Providers;
 
-namespace EcaMonitorAgent.Application.Services;
+namespace RdpShieldAgent.Application.Services;
 
 public class MonitorWorker : BackgroundService
 {
@@ -39,7 +39,7 @@ public class MonitorWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("ECA Monitor Agent started. Connecting to Dispatcher...");
+        _logger.LogInformation("RDPShield Agent started. Connecting to Dispatcher...");
         
         await _eventDispatcher.ConnectAsync();
 

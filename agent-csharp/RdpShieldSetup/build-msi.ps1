@@ -45,7 +45,7 @@ function Find-SignTool {
 
 # 1. Publish the agent to a self-contained release folder
 Write-Host "1. Publicando agente C#..." -ForegroundColor Cyan
-dotnet publish ../EcaMonitorAgent/EcaMonitorAgent.csproj -c Release -r win-x64 --self-contained true -o ../publish
+dotnet publish ../RdpShieldAgent/RdpShieldAgent.csproj -c Release -r win-x64 --self-contained true -o ../publish
 
 # 2. Optionally sign custom binaries before packaging (FIX-3 Option B)
 $signtoolPath = $null
@@ -65,15 +65,15 @@ if ($shouldSign) {
     Write-Host "Firma opcional habilitada. Usando: $signtoolPath" -ForegroundColor Cyan
     
     # Sign main executable
-    Write-Host "   -> Firmando EcaMonitorAgent.exe..." -ForegroundColor Cyan
+    Write-Host "   -> Firmando RdpShieldAgent.exe..." -ForegroundColor Cyan
     if ($CertThumbprint) {
-        & $signtoolPath sign /sha1 $CertThumbprint /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 ../publish/EcaMonitorAgent.exe
+        & $signtoolPath sign /sha1 $CertThumbprint /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 ../publish/RdpShieldAgent.exe
     } else {
-        & $signtoolPath sign /fd SHA256 /f $PfxPath /p $PfxPassword /tr http://timestamp.digicert.com /td SHA256 ../publish/EcaMonitorAgent.exe
+        & $signtoolPath sign /fd SHA256 /f $PfxPath /p $PfxPassword /tr http://timestamp.digicert.com /td SHA256 ../publish/RdpShieldAgent.exe
     }
     
-    # Sign any custom Eca dlls
-    $dlls = Get-ChildItem -Path "../publish" -Filter "Eca*.dll"
+    # Sign any custom RdpShield dlls
+    $dlls = Get-ChildItem -Path "../publish" -Filter "RdpShield*.dll"
     foreach ($dll in $dlls) {
         Write-Host "   -> Firmando dll: $($dll.Name)..." -ForegroundColor Cyan
         if ($CertThumbprint) {
@@ -106,8 +106,8 @@ $files = Get-ChildItem -Path $publishDir -File -Recurse
 
 foreach ($file in $files) {
     $relative = $file.FullName.Substring($publishDir.Length + 1)
-    # Skip main executable and pdb because EcaMonitorAgent.exe is defined manually in Package.wxs
-    if ($relative -eq "EcaMonitorAgent.exe" -or $relative -eq "EcaMonitorAgent.pdb" -or $relative -eq "config.json") {
+    # Skip main executable and pdb brdpshielduse RdpShieldAgent.exe is defined manually in Package.wxs
+    if ($relative -eq "RdpShieldAgent.exe" -or $relative -eq "RdpShieldAgent.pdb" -or $relative -eq "config.json") {
         continue
     }
     
@@ -129,23 +129,23 @@ Write-Host "   -> Files.wxs generado exitosamente." -ForegroundColor Green
 
 # 4. Compile the MSI using WiX Toolset
 Write-Host "3. Compilando instalador MSI con WiX..." -ForegroundColor Cyan
-wix build -o EcaAgent.msi Package.wxs Files.wxs
+wix build -o RdpShieldAgent.msi Package.wxs Files.wxs
 
 # 5. Optionally sign the output MSI
 if ($shouldSign) {
-    Write-Host "4. Firmando instalador MSI EcaAgent.msi..." -ForegroundColor Cyan
+    Write-Host "4. Firmando instalador MSI RdpShieldAgent.msi..." -ForegroundColor Cyan
     if ($CertThumbprint) {
-        & $signtoolPath sign /sha1 $CertThumbprint /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 EcaAgent.msi
+        & $signtoolPath sign /sha1 $CertThumbprint /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 RdpShieldAgent.msi
     } else {
-        & $signtoolPath sign /fd SHA256 /f $PfxPath /p $PfxPassword /tr http://timestamp.digicert.com /td SHA256 EcaAgent.msi
+        & $signtoolPath sign /fd SHA256 /f $PfxPath /p $PfxPassword /tr http://timestamp.digicert.com /td SHA256 RdpShieldAgent.msi
     }
     
-    Write-Host "5. Verificando firma de EcaAgent.msi..." -ForegroundColor Cyan
-    & $signtoolPath verify /pa EcaAgent.msi
+    Write-Host "5. Verificando firma de RdpShieldAgent.msi..." -ForegroundColor Cyan
+    & $signtoolPath verify /pa RdpShieldAgent.msi
 }
 
 Write-Host "=========================================" -ForegroundColor Green
-Write-Host " Instalador EcaAgent.msi creado con exito!" -ForegroundColor Green
+Write-Host " Instalador RdpShieldAgent.msi creado con exito!" -ForegroundColor Green
 if ($shouldSign) {
     Write-Host " Instalador firmado digitalmente con exito!" -ForegroundColor Green
 }

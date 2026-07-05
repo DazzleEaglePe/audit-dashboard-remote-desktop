@@ -1,6 +1,6 @@
 param(
-    [string]$Subject = "CN=ECA RDP Auditing, O=ECA, C=PE",
-    [string]$FriendlyName = "ECA Code Signing Certificate",
+    [string]$Subject = "CN=RDPShield RDP Auditing, O=RDPShield, C=PE",
+    [string]$FriendlyName = "RDPShield Code Signing Certificate",
     [int]$Years = 5,
     [string]$OutDir = ".",
     [securestring]$PfxPassword,
@@ -10,12 +10,12 @@ param(
 $ErrorActionPreference = 'Stop'
 
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host " ECA Code Signing Certificate Generator" -ForegroundColor Cyan
+Write-Host " RDPShield Code Signing Certificate Generator" -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
 # 1. Resolve output files
-$pfx = Join-Path $OutDir "ECA-CodeSign.pfx"
-$cer = Join-Path $OutDir "ECA-CodeSign.cer"
+$pfx = Join-Path $OutDir "RDPShield-CodeSign.pfx"
+$cer = Join-Path $OutDir "RDPShield-CodeSign.cer"
 
 $pfxResolved = Resolve-Path $pfx -ErrorAction SilentlyContinue
 if ($null -ne $pfxResolved -and -not $Force) {

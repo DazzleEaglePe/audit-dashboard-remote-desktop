@@ -1,4 +1,4 @@
-namespace EcaMonitorAgent.Domain.Models;
+namespace RdpShieldAgent.Domain.Models;
 
 public class ServerMetrics
 {
@@ -25,7 +25,7 @@ public class AgentConfig
 {
     public static readonly string DefaultConfigPath = System.IO.Path.Combine(
         System.Environment.GetFolderPath(System.Environment.SpecialFolder.CommonApplicationData),
-        "ECA",
+        "RDPShield",
         "config.json"
     );
 

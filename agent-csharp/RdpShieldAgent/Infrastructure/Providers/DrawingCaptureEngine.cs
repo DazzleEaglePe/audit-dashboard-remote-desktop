@@ -1,9 +1,9 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
-using EcaMonitorAgent.Domain.Interfaces;
+using RdpShieldAgent.Domain.Interfaces;
 
-namespace EcaMonitorAgent.Infrastructure.Providers;
+namespace RdpShieldAgent.Infrastructure.Providers;
 
 public class DrawingCaptureEngine : IScreenCaptureEngine
 {

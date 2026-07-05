@@ -5,12 +5,12 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
-using EcaMonitorAgent.Application.Services;
-using EcaMonitorAgent.Domain.Interfaces;
-using EcaMonitorAgent.Domain.Models;
-using EcaMonitorAgent.Infrastructure.Providers;
+using RdpShieldAgent.Application.Services;
+using RdpShieldAgent.Domain.Interfaces;
+using RdpShieldAgent.Domain.Models;
+using RdpShieldAgent.Infrastructure.Providers;
 
-namespace EcaMonitorAgent;
+namespace RdpShieldAgent;
 
 internal static class Program
 {
@@ -38,7 +38,7 @@ internal static class Program
         var agentConfig = new AgentConfig
         {
             ServerId = "placeholder", // Will be resolved dynamically
-            ApiUrl = root.TryGetProperty("api_url", out var aurl) ? aurl.GetString() ?? "https://dashboard.ecabot.site/api" : "https://dashboard.ecabot.site/api",
+            ApiUrl = root.TryGetProperty("api_url", out var aurl) ? aurl.GetString() ?? "https://dashboard.rdpshieldbot.site/api" : "https://dashboard.rdpshieldbot.site/api",
             ApiKey = "placeholder",   // Will be resolved dynamically
             HeartbeatIntervalSeconds = root.TryGetProperty("heartbeat_interval", out var hb) ? hb.GetInt32() : 30,
             ScreenshotIntervalMs = 200,
@@ -65,7 +65,7 @@ internal static class Program
         var builder = Host.CreateDefaultBuilder(args);
         builder.UseWindowsService(options =>
         {
-            options.ServiceName = "EcaMonitorAgent";
+            options.ServiceName = "RdpShieldAgent";
         });
 
         builder.ConfigureServices((hostContext, services) =>
@@ -76,7 +76,7 @@ internal static class Program
                 configure.AddConsole();
                 configure.AddEventLog(options =>
                 {
-                    options.SourceName = "EcaMonitorAgent";
+                    options.SourceName = "RdpShieldAgent";
                 });
             });
 

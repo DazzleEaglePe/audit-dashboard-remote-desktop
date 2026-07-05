@@ -1,6 +1,6 @@
-namespace EcaMonitorAgent.Domain.Interfaces;
+namespace RdpShieldAgent.Domain.Interfaces;
 
-using EcaMonitorAgent.Domain.Models;
+using RdpShieldAgent.Domain.Models;
 
 public interface IMetricsRecorder
 {

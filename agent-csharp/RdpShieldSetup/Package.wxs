@@ -1,6 +1,6 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
-  <Package Name="ECA Monitor Agent" 
-           Manufacturer="ECA" 
+  <Package Name="RDPShield Agent" 
+           Manufacturer="RDPShield" 
            Version="1.0.0" 
            UpgradeCode="d2d5a3c6-3023-455b-80df-8b2b6ef2713f" 
            Scope="perMachine">
@@ -8,36 +8,36 @@
     <MajorUpgrade DowngradeErrorMessage="Una versión más nueva de [ProductName] ya está instalada." />
     
     <!-- Launch Conditions: Require ENROLL_TOKEN to proceed with install -->
-    <Launch Message="Debe especificar el parámetro ENROLL_TOKEN para la instalación. Ejemplo: msiexec /i EcaAgent.msi ENROLL_TOKEN=eca_enroll_xxx" 
+    <Launch Message="Debe especificar el parámetro ENROLL_TOKEN para la instalación. Ejemplo: msiexec /i RdpShieldAgent.msi ENROLL_TOKEN=rdpshield_enroll_xxx" 
             Condition="Installed OR ENROLL_TOKEN" />
 
     <Property Id="ENROLL_TOKEN" Secure="yes" />
-    <Property Id="API_URL" Value="https://dashboard.ecabot.site/api" />
+    <Property Id="API_URL" Value="https://dashboard.rdpshieldbot.site/api" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
-      <Directory Id="ECADIR" Name="ECA">
+      <Directory Id="RDPShieldDIR" Name="RDPShield">
         <Directory Id="INSTALLDIR" Name="Agent" />
       </Directory>
     </StandardDirectory>
 
     <ComponentGroup Id="AgentServiceComponents" Directory="INSTALLDIR">
       <Component Guid="*">
-        <!-- Register EcaMonitorAgent.exe as KeyPath and install as Windows Service -->
-        <File Id="file_EcaMonitorAgent_exe" Source="..\publish\EcaMonitorAgent.exe" KeyPath="yes" />
+        <!-- Register RdpShieldAgent.exe as KeyPath and install as Windows Service -->
+        <File Id="file_RdpShieldAgent_exe" Source="..\publish\RdpShieldAgent.exe" KeyPath="yes" />
         
         <ServiceInstall
           Id="ServiceInstaller"
           Type="ownProcess"
-          Name="EcaMonitorAgent"
-          DisplayName="ECA Monitor Agent"
-          Description="ECA Monitor C# Agent - Streaming and system metrics recorder."
+          Name="RdpShieldAgent"
+          DisplayName="RDPShield Agent"
+          Description="RDPShield C# Agent - Streaming and system metrics recorder."
           Start="auto"
           Account="LocalSystem"
           ErrorControl="normal" />
           
         <ServiceControl
           Id="ServiceControl"
-          Name="EcaMonitorAgent"
+          Name="RdpShieldAgent"
           Start="install"
           Stop="both"
           Remove="uninstall"
@@ -84,7 +84,7 @@
       <Custom Action="CleanupConfig" After="RemoveFiles" Condition="REMOVE=&quot;ALL&quot;" />
     </InstallExecuteSequence>
 
-    <Feature Id="MainFeature" Title="ECA Agent" Level="1">
+    <Feature Id="MainFeature" Title="RDPShield Agent" Level="1">
       <ComponentGroupRef Id="AgentServiceComponents" />
       <ComponentGroupRef Id="AgentPublishComponents" />
     </Feature>

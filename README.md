@@ -1,4 +1,4 @@
-# ECA Monitor – Sistema de Auditoría de Escritorio Remoto 🔒🖥️
+# RDPShield – Sistema de Auditoría de Escritorio Remoto 🔒🖥️
 
 Un panel de control en tiempo real de alto rendimiento diseñado para la auditoría y monitoreo de múltiples Servidores Windows y sus sesiones de Escritorio Remoto (RDP) activas. Construido con tecnologías web modernas para proveer visibilidad instantánea sobre la actividad de los usuarios, el estado de los servidores y eventos de seguridad.
 
@@ -7,7 +7,7 @@ Un panel de control en tiempo real de alto rendimiento diseñado para la auditor
 ## 🚀 Propósito y Problema Resuelto
 Administrar múltiples servidores Windows con múltiples usuarios RDP conectados al mismo tiempo suele generar "puntos ciegos" respecto a qué están haciendo los usuarios, cuándo inician sesión y cuál es la carga de trabajo real en los servidores.
 
-ECA Monitor resuelve esto desplegando un agente ultraligero que se ejecuta en segundo plano en cada servidor Windows y alimenta de manera continua datos de sistema, capturas de pantalla y métricas de seguridad a un moderno panel web en Next.js. Actúa como una "cámara de seguridad" de élite y un monitor vital de recursos para toda tu infraestructura RDP.
+RDPShield resuelve esto desplegando un agente ultraligero que se ejecuta en segundo plano en cada servidor Windows y alimenta de manera continua datos de sistema, capturas de pantalla y métricas de seguridad a un moderno panel web en Next.js. Actúa como una "cámara de seguridad" de élite y un monitor vital de recursos para toda tu infraestructura RDP.
 
 ## ✨ Características Principales
 
@@ -51,7 +51,7 @@ cd audit-dashboard-remote-desktop/dashboard
 npm install
 # Configura .env.local con JWT_SECRET y la variable secreta API_KEY
 npm run build
-pm2 start server.js --name "eca-dashboard"
+pm2 start server.js --name "rdpshield-dashboard"
 ```
 
 ### Despliegue de Agentes en Windows
